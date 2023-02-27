@@ -1,0 +1,4 @@
+[submodule "themes/LoveIt"]
+	path = themes/LoveIt
+	url = git@github.com:dillonzq/LoveIt.git
+	tag = v0.2.11
