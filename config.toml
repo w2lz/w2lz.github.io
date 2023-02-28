@@ -798,7 +798,7 @@ ignoreErrors = ["error-remote-getjson", "error-missing-instagram-accesstoken"]
       [[languages.zh-cn.menu.main]]
         weight = 1
         identifier = "posts"
-        pre = ""
+        pre = "<i class='fa-solid fa-archive' aria-hidden='true'></i>"
         post = ""
         name = "所有文章"
         url = "/posts/"
@@ -806,7 +806,7 @@ ignoreErrors = ["error-remote-getjson", "error-missing-instagram-accesstoken"]
       [[languages.zh-cn.menu.main]]
         weight = 2
         identifier = "tags"
-        pre = ""
+        pre = "<i class='fa-solid fa-tags' aria-hidden='true'></i>"
         post = ""
         name = "标签"
         url = "/tags/"
@@ -814,7 +814,7 @@ ignoreErrors = ["error-remote-getjson", "error-missing-instagram-accesstoken"]
       [[languages.zh-cn.menu.main]]
         weight = 3
         identifier = "categories"
-        pre = ""
+        pre = "<i class='fa-solid fa-th' aria-hidden='true'></i>"
         post = ""
         name = "分类"
         url = "/categories/"
@@ -822,14 +822,14 @@ ignoreErrors = ["error-remote-getjson", "error-missing-instagram-accesstoken"]
       [[languages.zh-cn.menu.main]]
         weight = 4
         identifier = "documentation"
-        pre = ""
+        pre = "<i class='fa-solid fa-book' aria-hidden='true'></i>"
         name = "文档"
         url = "/categories/documentation/"
         title = ""
       [[languages.zh-cn.menu.main]]
         weight = 5
         identifier = "about"
-        pre = ""
+        pre = "<i class='fa-solid fa-user-tie' aria-hidden='true'></i>"
         post = ""
         name = "关于"
         url = "/about/"
