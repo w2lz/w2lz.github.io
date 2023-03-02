@@ -2,7 +2,7 @@
 title: "1.Go调度器系列-起源"
 date: 2023-02-28T18:48:38+08:00
 draft: false
-description: "了解Go调度器历史背景"
+description: "了解Go调度器历史背景。"
 
 tags:
   - "Go调度器系列"
@@ -63,6 +63,8 @@ toc:
 - 1:1，1个协程绑定一个线程，这种最容易实现。协程的调度都有CPU完成了，不存在N:1的缺点，但是有一个缺点就是协程的创建、删除和切换的代价都有CPU完成，有点略显昂贵。
 
 - M:N，M个协程绑定N个线程，是N:1和1:1类型的结合，克服了以上两种模型的缺点，但是实现起来最为复杂。
+
+![coroutine-thread-map](https://file.yingnan.wang/golang/coroutine-thread-map.png)
 
 协程是个好东西，因此不少语言都支持了协程，比如Lua、Erlang、Java，就算语言不支持，也有库支持协程，比如C语言、Kotlin和Python都有相应的协程库。
 
