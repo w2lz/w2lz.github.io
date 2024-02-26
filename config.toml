@@ -821,10 +821,10 @@ ignoreErrors = ["error-remote-getjson", "error-missing-instagram-accesstoken"]
         title = ""
       [[languages.zh-cn.menu.main]]
         weight = 4
-        identifier = "documentation"
+        identifier = "plan-and-summary"
         pre = "<i class='fa-solid fa-book' aria-hidden='true'></i>"
-        name = "文档"
-        url = "/categories/documentation/"
+        name = "计划和总结"
+        url = "/categories/计划和总结/"
         title = ""
       [[languages.zh-cn.menu.main]]
         weight = 5
