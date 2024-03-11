@@ -1,8 +1,8 @@
 ---
-title: "Go语言中array和slice的区别"
+title: "Go 语言中 array 和 slice 的区别"
 date: 2024-03-07T17:48:55+08:00
 draft: false
-description: "Go语言中 array 和 slice 的区别。"
+description: "Go 语言中 array 和 slice 的区别。"
 
 tags:
   - "Go切片面试问题合集"
@@ -19,7 +19,7 @@ toc:
 
 <!--more-->
 
-## Go语言中 array 和 slice 的区别
+## Go 语言中 array 和 slice 的区别
 
 ### 1、array
 
