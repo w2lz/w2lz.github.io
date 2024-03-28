@@ -23,6 +23,47 @@ toc:
 
 ### 1、程序中引入 pprof package
 
+```go
+import _ "net/http/pprof"
+```
+
 ### 2、程序中开启 HTTP 监听服务
 
+```go
+package main
+
+import (
+	"net/http"
+	_ "net/http/pprof"
+)
+
+func main() {
+	for i := 0; i < 10; i++ {
+		go func() {
+			select {}
+		}()
+	}
+	go func() {
+		err := http.ListenAndServe("127.0.0.1:6060", nil)
+		if err != nil {
+			panic(err)
+		}
+	}()
+
+	select {}
+}
+```
+
 ### 3、分析 goroutine 文件
+
+shell 执行如下命令
+
+```shell
+go tool pprof -http=:1248 http://127.0.0.1:6060/debug/pprof/goroutine
+```
+
+会自动打开浏览器页面如下图所示
+
+![golang-pprof-result](https://file.yingnan.wang/golang/golang-pprof-result.png)
+
+在图中可以清晰的看到 goroutine 的数量以及调用关系，可以看到有 103 个 goroutine。
