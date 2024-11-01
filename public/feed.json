@@ -1,0 +1,18 @@
+{
+  "version": "https://jsonfeed.org/version/1.1",
+  "title": "一个PHP菜鸟的心路历程",
+  "description": "王二愣子的博客.",
+  "home_page_url": "http://localhost:1313/",
+  "language": "zh-CN",
+  "icon": "http://localhost:1313/apple-touch-icon.png",
+  "favicon": "http://localhost:1313/favicon.ico",
+  "authors": [
+    {
+      "name": "w2lz",
+      "url": "https://github.com/w2lz",
+      "avatar": "http://localhost:1313/images/avatar.jpg"
+    }
+  ],
+  "items": [
+  ]
+}

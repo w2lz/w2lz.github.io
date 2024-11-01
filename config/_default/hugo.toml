@@ -1,0 +1,31 @@
+# -------------------------------------------------------------------------------------
+# Hugo Configuration
+# See: https://gohugo.io/getting-started/configuration/
+# -------------------------------------------------------------------------------------
+
+title = "一个PHP菜鸟的心路历程"
+baseURL = "http://localhost:1313"
+# theme = ["FixIt", "shortcode-mmt-netease", "shortcode-sponsor-log"]
+defaultContentLanguage = "zh-cn"
+languageCode = "zh-CN"
+languageName = "简体中文"
+disableLanguages = ["en", "zh-tw"]
+hasCJKLanguage = true
+enableRobotsTXT = true
+enableEmoji = true
+enableGitInfo = true
+buildDrafts = false
+summaryLength = 150
+titleCaseStyle = "ap"
+capitalizeListTitles = false
+# the editor to use when creating new content
+newContentEditor = "code"
+# ignore some build errors
+ignoreLogs = [
+  "error-get-remote-image",
+  "error-get-remote-json",
+  "error-get-gh-repo",
+  "error-remote-getjson",
+  "error-missing-instagram-accesstoken",
+  "warning-dev-version"
+]
