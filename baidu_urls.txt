@@ -2,4 +2,8 @@ https://blog.yingnan.wang/reward/
 https://blog.yingnan.wang/guestbook/
 https://blog.yingnan.wang/friends/
 https://blog.yingnan.wang/about/
+https://blog.yingnan.wang/projects/w2lz/w2lz.github.io/
 https://blog.yingnan.wang/projects/w2lz/hugo-blog/
+https://blog.yingnan.wang/readme/
+https://blog.yingnan.wang/2024/
+https://blog.yingnan.wang/h1-plan/
