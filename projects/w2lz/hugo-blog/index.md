@@ -14,7 +14,7 @@
 
 你可以通过我的[微信公众号](https://blog.yingnan.wang/images/qr-wx-mp.webp &#34;关注「一个 PHP 菜鸟的心路历程」公众号&#34;)、[GitHub](https://github.com/w2lz/hugo-blog &#34;Watch on GitHub&#34;) 或 [RSS](http://blog.yingnan.wang/index.xml) 来订阅本博客。
 
-![blog-preview](https://raw.githubusercontent.com/w2lz/hugo-blog/refs/heads/main//assets/images/apple-devices-preview.webp)
+![blog-preview](https://raw.githubusercontent.com/w2lz/hugo-blog/refs/heads/main/assets/images/apple-devices-preview.webp)
 
 ## Content
 
@@ -36,7 +36,7 @@
 
 本博客已部署到 [Vercel](https://blog-w2lz.vercel.app/) 和 [GitHub Pages](https://github.com/w2lz/w2lz.github.io)，工作流如下图所示：
 
-![blog-flow](https://raw.githubusercontent.com/w2lz/hugo-blog/refs/heads/main//assets/images/blog-flow.png)
+![blog-flow](https://raw.githubusercontent.com/w2lz/hugo-blog/refs/heads/main/assets/images/blog-flow.png)
 
 ```bash
 ▸ .github/       # GitHub configuration
