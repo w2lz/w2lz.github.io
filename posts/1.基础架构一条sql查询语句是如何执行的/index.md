@@ -45,7 +45,7 @@ mysql -h$ip -P$port -u$user -p
 
 ![show processlist](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/f2da4aa3a672d48ec05df97b9f992fed.webp)
 
-客户端如果太长时间没动静，连接器就会自动将它断开。这个时间是由参数 wait_timeout 控制的，默认值是 8 小时。如果在连接被断开之后，客户端再次发送请求的话，就会收到一个错误提醒： Lost connection to MySQL server during query。这时候如果要继续，就需要重连，然后再执行请求了。
+客户端如果太长时间没动静，连接器就会自动将它断开。这个时间是由参数 wait_timeout 控制的，默认值是 8 小时。如果在连接被断开之后，客户端再次发送请求的话，就会收到一个错误提醒：Lost connection to MySQL server during query。这时候如果要继续，就需要重连，然后再执行请求了。
 
 数据库里面，长连接是指连接成功后，如果客户端持续有请求，则一直使用同一个连接。短连接则是指每次执行完很少的几次查询就断开连接，下次查询再重新建立一个。建立连接的过程通常是比较复杂的，所以建议你在使用中要尽量减少建立连接的动作，也就是尽量使用长连接。
 
@@ -141,7 +141,7 @@ ERROR 1142 (42000): SELECT command denied to user &#39;b&#39;@&#39;localhost&#39
 
 ## 问题
 
-问：如果表 T 中没有字段 k，而执行了这个语句 select * from T where k=1, 那肯定是会报“不存在这个列”的错误： “Unknown column ‘k’ in ‘where clause’”。这个错误是在上面提到的哪个阶段报出来的呢？
+问：如果表 T 中没有字段 k，而执行了这个语句 select * from T where k=1, 那肯定是会报“不存在这个列”的错误： “Unknown column‘k’in‘where clause’”。这个错误是在上面提到的哪个阶段报出来的呢？
 
 
 ---
