@@ -143,6 +143,8 @@ ERROR 1142 (42000): SELECT command denied to user &#39;b&#39;@&#39;localhost&#39
 
 问：如果表 T 中没有字段 k，而执行了这个语句 select * from T where k=1, 那肯定是会报“不存在这个列”的错误： “Unknown column‘k’in‘where clause’”。这个错误是在上面提到的哪个阶段报出来的呢？
 
+答：分析器
+
 
 ---
 
