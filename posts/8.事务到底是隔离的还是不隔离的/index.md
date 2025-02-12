@@ -214,6 +214,16 @@ insert into t(id, c) values(1,1),(2,2),(3,3),(4,4);
 
 复现出来以后，请再思考一下，在实际的业务开发中有没有可能碰到这种情况？应用代码会不会掉进这个“坑”里，又是怎么解决的呢？
 
+![构造场景](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/be7a4d8af04cdf93aaa11108933559ae.webp)
+
+这样，session A 看到的就是上面截图的效果了。
+
+![另一种情况](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/e24a0689571337959138d787c408defa.webp)
+
+这个操作序列跑出来，session A 看的内容也是能够复现截图的效果的。这个 session B’启动的事务比 A 要早。
+
+用新的方式来分析 session B’的更新为什么对 session A 不可见就是：在 session A 视图数组创建的瞬间，session B’是活跃的，属于“版本未提交，不可见”这种情况。
+
 
 ---
 
