@@ -103,7 +103,7 @@ mysql&gt; insert into t(id,k) values(id1,k1),(id2,k2);
 
 ![带 change buffer 的更新过程](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/980a2b786f0ea7adabef2e64fb4c4ca3.webp)
 
-分析这条更新语句，你会发现它涉及了四个部分：内存、redo log（ib_log_fileX）、 数据表空间（t.ibd）、系统表空间（ibdata1）。这条更新语句做了如下的操作（按照图中的数字顺序）：
+分析这条更新语句，你会发现它涉及了四个部分：内存、redo log（ib_log_fileX）、数据表空间（t.ibd）、系统表空间（ibdata1）。这条更新语句做了如下的操作（按照图中的数字顺序）：
 
 1. Page 1 在内存中，直接更新内存；
 
