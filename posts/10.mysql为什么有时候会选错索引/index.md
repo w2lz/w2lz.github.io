@@ -87,7 +87,7 @@ MySQL 在真正开始执行语句之前，并不能精确地知道满足这个�
 
 这个统计信息就是索引的“区分度”。显然，一个索引上不同的值越多，这个索引的区分度就越好。而一个索引上不同的值的个数，称之为“基数”（cardinality）。也就是说，这个基数越大，索引的区分度越好。
 
-可以使用 show index 方法，看到一个索引的基数。如下图所示，就是表 t 的 show index 的结果 。虽然这个表的每一行的三个字段值都是一样的，但是在统计信息中，这三个索引的基数值并不同，而且其实都不准确。
+可以使用 show index 方法，看到一个索引的基数。如下图所示，就是表 t 的 show index 的结果。虽然这个表的每一行的三个字段值都是一样的，但是在统计信息中，这三个索引的基数值并不同，而且其实都不准确。
 
 ![表 t 的 show index 结果](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/16dbf8124ad529fec0066950446079d4.webp)
 
@@ -119,7 +119,7 @@ rows 这个字段表示的是预计扫描行数。
 
 优化器会估算这两个选择的代价，从结果看来，优化器认为直接扫描主键索引更快。当然，从执行时间看来，这个选择并不是最优的。
 
-使用普通索引需要把回表的代价算进去，在第一幅图中执行 explain 的时候，也考虑了这个策略的代价 ，但第一幅图中的选择是对的。也就是说，这个策略并没有问题。
+使用普通索引需要把回表的代价算进去，在第一幅图中执行 explain 的时候，也考虑了这个策略的代价，但第一幅图中的选择是对的。也就是说，这个策略并没有问题。
 
 所以冤有头债有主，MySQL 选错索引，这件事儿还得归咎到没能准确地判断出扫描行数。至于为什么会得到错误的扫描行数。既然是统计信息不对，那就修正。analyze table t 命令，可以用来重新统计索引信息。
 
@@ -169,7 +169,7 @@ mysql&gt; explain select * from t where (a between 1 and 1000) and (b between 50
 
 但其实使用 force index 最主要的问题还是变更的及时性。因为选错索引的情况还是比较少出现的，所以开发的时候通常不会先写上 force index。而是等到线上出现问题的时候，才会再去修改 SQL 语句、加上 force index。但是修改之后还要测试和发布，对于生产系统来说，这个过程不够敏捷。所以，数据库的问题最好还是在数据库内部来解决。那么，在数据库里面该怎样解决呢？
 
-既然优化器放弃了使用索引 a，说明 a 还不够合适，所以第二种方法就是，可以考虑修改语句，引导 MySQL 使用我们期望的索引。比如，在这个例子里，显然把“order by b limit 1” 改成 “order by b,a limit 1” ，语义的逻辑是相同的。再来看看改之后的效果：
+既然优化器放弃了使用索引 a，说明 a 还不够合适，所以第二种方法就是，可以考虑修改语句，引导 MySQL 使用我们期望的索引。比如，在这个例子里，显然把“order by b limit 1”改成“order by b,a limit 1” ，语义的逻辑是相同的。再来看看改之后的效果：
 
 ![order by b,a limit 1 执行结果](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/14cd598e52a2b72dd334a42603e5b894.webp)
 
@@ -177,7 +177,7 @@ mysql&gt; explain select * from t where (a between 1 and 1000) and (b between 50
 
 现在 order by b,a 这种写法，要求按照 b,a 排序，就意味着使用这两个索引都需要排序。因此，扫描行数成了影响决策的主要条件，于是此时优化器选了只需要扫描 1000 行的索引 a。
 
-当然，这种修改并不是通用的优化手段，只是刚好在这个语句里面有 limit 1，因此如果有满足条件的记录， order by b limit 1 和 order by b,a limit 1 都会返回 b 是最小的那一行，逻辑上一致，才可以这么做。如果你觉得修改语义这件事儿不太好，这里还有一种改法，下图是执行效果。
+当然，这种修改并不是通用的优化手段，只是刚好在这个语句里面有 limit 1，因此如果有满足条件的记录，order by b limit 1 和 order by b,a limit 1 都会返回 b 是最小的那一行，逻辑上一致，才可以这么做。如果你觉得修改语义这件事儿不太好，这里还有一种改法，下图是执行效果。
 
 ```sql
 mysql&gt; select * from  (select * from t where (a between 1 and 1000)  and (b between 50000 and 100000) order by b limit 100)alias limit 1;
@@ -201,7 +201,7 @@ mysql&gt; select * from  (select * from t where (a between 1 and 1000)  and (b b
 
 问：在构造第一个例子的过程中，通过 session A 的配合，让 session B 删除数据后又重新插入了一遍数据，然后就发现 explain 结果中，rows 字段从 10001 变成 37000 多。
 
-而如果没有 session A 的配合，只是单独执行 delete from t 、call idata()、explain 这三句话，会看到 rows 字段其实还是 10000 左右。这是什么原因呢？
+而如果没有 session A 的配合，只是单独执行 delete from t、call idata()、explain 这三句话，会看到 rows 字段其实还是 10000 左右。这是什么原因呢？
 
 答：delete 语句删掉了所有的数据，然后再通过 call idata() 插入了 10 万行数据，看上去是覆盖了原来的 10 万行。
 
