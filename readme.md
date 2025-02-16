@@ -1,11 +1,21 @@
 # 一个 PHP 菜鸟的心路历程
 
-共计 18 篇文章
+共计 28 篇文章
 
 ## 2025
 
-共计 16 篇文章
+共计 26 篇文章
 
+- 02-16 [25 | MySQL 是怎么保证高可用的？](https://blog.yingnan.wang/posts/25.mysql%E6%98%AF%E6%80%8E%E4%B9%88%E4%BF%9D%E8%AF%81%E9%AB%98%E5%8F%AF%E7%94%A8%E7%9A%84/ "2025-02-16 21:58:56")
+- 02-16 [24 | MySQL 是怎么保证主备一致的？](https://blog.yingnan.wang/posts/24.mysql%E6%98%AF%E6%80%8E%E4%B9%88%E4%BF%9D%E8%AF%81%E4%B8%BB%E5%A4%87%E4%B8%80%E8%87%B4%E7%9A%84/ "2025-02-16 21:58:35")
+- 02-16 [23 | MySQL 是怎么保证数据不丢的？](https://blog.yingnan.wang/posts/23.mysql%E6%98%AF%E6%80%8E%E4%B9%88%E4%BF%9D%E8%AF%81%E6%95%B0%E6%8D%AE%E4%B8%8D%E4%B8%A2%E7%9A%84/ "2025-02-16 21:58:14")
+- 02-16 [22 | MySQL 有哪些“饮鸩止渴”提高性能的方法？](https://blog.yingnan.wang/posts/22.mysql%E6%9C%89%E5%93%AA%E4%BA%9B%E9%A5%AE%E9%B8%A9%E6%AD%A2%E6%B8%B4%E6%8F%90%E9%AB%98%E6%80%A7%E8%83%BD%E7%9A%84%E6%96%B9%E6%B3%95/ "2025-02-16 21:57:55")
+- 02-16 [21 | 为什么我只改一行的语句，锁这么多？](https://blog.yingnan.wang/posts/21.%E4%B8%BA%E4%BB%80%E4%B9%88%E6%88%91%E5%8F%AA%E6%94%B9%E4%B8%80%E8%A1%8C%E7%9A%84%E8%AF%AD%E5%8F%A5%E9%94%81%E8%BF%99%E4%B9%88%E5%A4%9A/ "2025-02-16 21:57:32")
+- 02-16 [20 | 幻读是什么，幻读有什么问题？](https://blog.yingnan.wang/posts/20.%E5%B9%BB%E8%AF%BB%E6%98%AF%E4%BB%80%E4%B9%88%E5%B9%BB%E8%AF%BB%E6%9C%89%E4%BB%80%E4%B9%88%E9%97%AE%E9%A2%98/ "2025-02-16 21:57:08")
+- 02-16 [19 | 为什么我只查一行的语句，也执行这么慢？](https://blog.yingnan.wang/posts/19.%E4%B8%BA%E4%BB%80%E4%B9%88%E6%88%91%E5%8F%AA%E6%9F%A5%E4%B8%80%E8%A1%8C%E7%9A%84%E8%AF%AD%E5%8F%A5%E4%B9%9F%E6%89%A7%E8%A1%8C%E8%BF%99%E4%B9%88%E6%85%A2/ "2025-02-16 21:56:47")
+- 02-16 [18 | 为什么这些 SQL 语句逻辑相同，性能却差异巨大？](https://blog.yingnan.wang/posts/18.%E4%B8%BA%E4%BB%80%E4%B9%88%E8%BF%99%E4%BA%9Bsql%E8%AF%AD%E5%8F%A5%E9%80%BB%E8%BE%91%E7%9B%B8%E5%90%8C%E6%80%A7%E8%83%BD%E5%8D%B4%E5%B7%AE%E5%BC%82%E5%B7%A8%E5%A4%A7/ "2025-02-16 21:56:03")
+- 02-16 [17 | 如何正确地显示随机消息？](https://blog.yingnan.wang/posts/17.%E5%A6%82%E4%BD%95%E6%AD%A3%E7%A1%AE%E5%9C%B0%E6%98%BE%E7%A4%BA%E9%9A%8F%E6%9C%BA%E6%B6%88%E6%81%AF/ "2025-02-16 21:55:26")
+- 02-16 [16 | “order by”是怎么工作的？](https://blog.yingnan.wang/posts/16.order-by%E6%98%AF%E6%80%8E%E4%B9%88%E5%B7%A5%E4%BD%9C%E7%9A%84/ "2025-02-16 21:54:47")
 - 02-12 [15 | 答疑文章（一）：日志和索引相关问题](https://blog.yingnan.wang/posts/15.%E7%AD%94%E7%96%91%E6%96%87%E7%AB%A0%E4%B8%80%E6%97%A5%E5%BF%97%E5%92%8C%E7%B4%A2%E5%BC%95%E7%9B%B8%E5%85%B3%E9%97%AE%E9%A2%98/ "2025-02-12 20:29:14")
 - 02-12 [14 | count(*) 这么慢，我该怎么办？](https://blog.yingnan.wang/posts/14.count%E8%BF%99%E4%B9%88%E6%85%A2%E6%88%91%E8%AF%A5%E6%80%8E%E4%B9%88%E5%8A%9E/ "2025-02-12 20:27:22")
 - 02-12 [13 | 为什么表数据删掉一半，表文件大小不变？](https://blog.yingnan.wang/posts/13.%E4%B8%BA%E4%BB%80%E4%B9%88%E8%A1%A8%E6%95%B0%E6%8D%AE%E5%88%A0%E6%8E%89%E4%B8%80%E5%8D%8A%E8%A1%A8%E6%96%87%E4%BB%B6%E5%A4%A7%E5%B0%8F%E4%B8%8D%E5%8F%98/ "2025-02-12 20:27:22")
