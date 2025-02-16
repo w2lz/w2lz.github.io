@@ -89,9 +89,65 @@
 
 ## Online 和 inplace
 
+在第三幅图中，把表 A 中的数据导出来的存放位置叫作 tmp_table。这是一个临时表，是在 server 层创建的。
+
+在第四幅图中，根据表 A 重建出来的数据是放在“tmp_file”里的，这个临时文件是 InnoDB 在内部创建出来的。整个 DDL 过程都在 InnoDB 内部完成。对于 server 层来说，没有把数据挪动到临时表，是一个“原地”操作，这就是“inplace”名称的来源。
+
+如果你有一个 1TB 的表，现在磁盘间是 1.2TB，能不能做一个 inplace 的 DDL 呢？答案是不能。因为，tmp_file 也是要占用临时空间的。重建表的这个语句 alter table t engine=InnoDB，其实隐含的意思是：
+
+```sql
+alter table t engine=innodb,ALGORITHM=inplace;
+```
+
+跟 inplace 对应的就是拷贝表的方式了，用法是：
+
+```sql
+alter table t engine=innodb,ALGORITHM=copy;
+```
+
+当使用 ALGORITHM=copy 的时候，表示的是强制拷贝表，对应的流程就是第三幅图的操作过程。你可能会觉得，inplace 跟 Online 是不是就是一个意思？其实不是的，只是在重建表这个逻辑中刚好是这样而已。比如，如果要给 InnoDB 表的一个字段加全文索引，写法是：
+
+```sql
+alter table t add FULLTEXT(field_name);
+```
+
+这个过程是 inplace 的，但会阻塞增删改操作，是非 Online 的。如果说这两个逻辑之间的关系是什么的话，可以概括为：
+
+1. DDL 过程如果是 Online 的，就一定是 inplace 的；
+
+2. 反过来未必，也就是说 inplace 的 DDL，有可能不是 Online 的。截止到 MySQL 8.0，添加全文索引（FULLTEXT index）和空间索引 (SPATIAL index) 就属于这种情况。
+
+使用 optimize table、analyze table 和 alter table 这三种方式重建表有什么区别？
+
+- 从 MySQL 5.6 版本开始，alter table t engine = InnoDB（也就是 recreate）默认的就是上面第四幅图的流程了；
+
+- analyze table t 其实不是重建表，只是对表的索引信息做重新统计，没有修改数据，这个过程中加了 MDL 读锁；
+
+- optimize table t 等于 recreate&#43;analyze。
+
 ## 小结
 
+如果要收缩一个表，只是 delete 掉表里面不用的数据的话，表文件的大小是不会变的，还要通过 alter table 命令重建表，才能达到表文件变小的目的。重建表有两种实现方式，Online DDL 的方式是可以考虑在业务低峰期使用的，而 MySQL 5.5 及之前的版本，这个命令是会阻塞 DML 的，这个需要特别小心。
+
 ## 问题
+
+问：假设现在有人碰到了一个“想要收缩表空间，结果适得其反”的情况，看上去是这样的：
+
+1. 一个表 t 文件大小为 1TB；
+
+2. 对这个表执行 alter table t engine=InnoDB；
+
+3. 发现执行完成后，空间不仅没变小，还稍微大了一点儿，比如变成了 1.01TB。
+
+你觉得可能是什么原因呢？
+
+答：这个表本身就已经没有空洞的了，比如说刚刚做过一次重建表操作。
+
+1. 将表 t 重建一次；
+
+2. 插入一部分数据，但是插入的这些数据，用掉了一部分的预留空间；
+
+3. 这种情况下，再重建一次表 t，就可能会出现问题中的现象。
 
 
 ---

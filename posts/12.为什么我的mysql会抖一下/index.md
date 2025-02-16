@@ -126,7 +126,13 @@ select @a/@b;
 
 ## 问题
 
-问：一个内存配置为 128GB、innodb_io_capacity 设置为 20000 的大规格实例，正常会建议你将 redo log 设置成 4 个 1GB 的文件。但如果你在配置的时候不慎将 redo log 设置成了 1 个 100M 的文件，会发生什么情况呢？又为什么会出现这样的情况呢？
+问：一个内存配置为 128GB、innodb_io_capacity 设置为 20000 的大规格实例，正常会建议你将 redo log 设置成 4 个 1GB 的文件。但如果在配置的时候不慎将 redo log 设置成了 1 个 100M 的文件，会发生什么情况呢？又为什么会出现这样的情况呢？
+
+答：每次事务提交都要写 redo log，如果设置太小，很快就会被写满，也就是下面这个图的状态，这个“环”将很快被写满，write pos 一直追着 CP。这时候系统不得不停止所有更新，去推进 checkpoint。
+
+![redo log 设置太小情况](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/a25bdbbfc2cfc5d5e20690547fe7f2e5.webp)
+
+这时，看到的现象就是磁盘压力很小，但是数据库出现间歇性的性能下跌。
 
 
 ---
