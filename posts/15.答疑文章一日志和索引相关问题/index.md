@@ -260,7 +260,7 @@ mysql&gt; update t set a=2 where id=1;
 
 ![锁验证方式](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/6d9d8837560d01b57d252c470157ea90.webp)
 
-session B 的 update 语句被 blocked 了，加锁这个动作是 InnoDB 才能做的，所以排除选项 1。B被阻塞，代表A拿到了写锁，如果只是读数据，发现相同，不更新直接返回，干嘛还拿写锁呢，既然拿了写锁，就不是第一个选项。
+session B 的 update 语句被 blocked 了，加锁这个动作是 InnoDB 才能做的，所以排除选项 1。B 被阻塞，代表 A 拿到了写锁，如果只是读数据，发现相同，不更新直接返回，干嘛还拿写锁呢，既然拿了写锁，就不是第一个选项。
 
 第二个选项是，MySQL 调用了 InnoDB 引擎提供的接口，但是引擎发现值与原来相同，不更新，直接返回。有没有这种可能呢？这里用一个可见性实验来确认。假设当前表里的值是 (1,2)。
 

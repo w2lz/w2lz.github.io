@@ -39,7 +39,7 @@ Extra 这个字段中的“Using filesort”表示的就是需要排序，MySQL 
 
 ![city 字段的索引示意图](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/5334cca9118be14bde95ec94b02f0a3e.webp)
 
-从图中可以看到，满足 city=&#39;杭州’条件的行，是从 ID_X 到 ID_(X&#43;N) 的这些记录。通常情况下，这个语句执行流程如下所示 ：
+从图中可以看到，满足 city=&#39;杭州’条件的行，是从 ID_X 到 ID_(X&#43;N) 的这些记录。通常情况下，这个语句执行流程如下所示：
 
 1. 初始化 sort_buffer，确定放入 name、city、age 这三个字段；
 
@@ -64,10 +64,10 @@ Extra 这个字段中的“Using filesort”表示的就是需要排序，MySQL 
 sort_buffer_size，就是 MySQL 为排序开辟的内存（sort_buffer）的大小。如果要排序的数据量小于 sort_buffer_size，排序就在内存中完成。但如果排序数据量太大，内存放不下，则不得不利用磁盘临时文件辅助排序。可以用下面介绍的方法，来确定一个排序语句是否使用了临时文件。
 
 ```sql
-/* 打开optimizer_trace，只对本线程有效 */
+/* 打开 optimizer_trace，只对本线程有效 */
 SET optimizer_trace=&#39;enabled=on&#39;; 
 
-/* @a保存Innodb_rows_read的初始值 */
+/* @a 保存 Innodb_rows_read 的初始值 */
 select VARIABLE_VALUE into @a from  performance_schema.session_status where variable_name = &#39;Innodb_rows_read&#39;;
 
 /* 执行语句 */
@@ -76,10 +76,10 @@ select city, name,age from t where city=&#39;杭州&#39; order by name limit 100
 /* 查看 OPTIMIZER_TRACE 输出 */
 SELECT * FROM `information_schema`.`OPTIMIZER_TRACE`\G
 
-/* @b保存Innodb_rows_read的当前值 */
+/* @b 保存 Innodb_rows_read 的当前值 */
 select VARIABLE_VALUE into @b from performance_schema.session_status where variable_name = &#39;Innodb_rows_read&#39;;
 
-/* 计算Innodb_rows_read差值 */
+/* 计算 Innodb_rows_read 差值 */
 select @b-@a;
 ```
 
@@ -219,7 +219,7 @@ alter table t add index city_user_age(city, name, age);
 
 ## 问题
 
-问：假设表里面已经有了 city_name(city, name) 这个联合索引，然后要查杭州和苏州两个城市中所有的市民的姓名，并且按名字排序，显示前 100 条记录。如果 SQL 查询语句是这么写的 ：
+问：假设表里面已经有了 city_name(city, name) 这个联合索引，然后要查杭州和苏州两个城市中所有的市民的姓名，并且按名字排序，显示前 100 条记录。如果 SQL 查询语句是这么写的：
 
 ```sql
 mysql&gt; select * from t where city in (&#39;杭州&#39;,&#34;苏州&#34;) order by name limit 100;
@@ -229,7 +229,41 @@ mysql&gt; select * from t where city in (&#39;杭州&#39;,&#34;苏州&#34;) orde
 
 如果业务端代码由你来开发，需要实现一个在数据库端不需要排序的方案，你会怎么实现呢？
 
-进一步地，如果有分页需求，要显示第 101 页，也就是说语句最后要改成 “limit 10000,100”， 你的实现方法又会是什么呢？
+进一步地，如果有分页需求，要显示第 101 页，也就是说语句最后要改成“limit 10000,100”，你的实现方法又会是什么呢？
+
+答：虽然有 (city,name) 联合索引，对于单个 city 内部，name 是递增的。但是由于这条 SQL 语句不是要单独地查一个 city 的值，而是同时查了&#34;杭州&#34;和&#34; 苏州 &#34;两个城市，因此所有满足条件的 name 就不是递增的了。也就是说，这条 SQL 语句需要排序。
+
+那怎么避免排序呢？这里，要用到 (city,name) 联合索引的特性，把这一条语句拆成两条语句，执行流程如下：
+
+1. 执行 select * from t where city=“杭州”order by name limit 100; 这个语句是不需要排序的，客户端用一个长度为 100 的内存数组 A 保存结果。
+
+2. 执行 select * from t where city=“苏州”order by name limit 100; 用相同的方法，假设结果被存进了内存数组 B。
+
+3. 现在 A 和 B 是两个有序数组，然后可以用归并排序的思想，得到 name 最小的前 100 值，就是需要的结果了。
+
+如果把这条 SQL 语句里“limit 100”改成“limit 10000,100”的话，处理方式其实也差不多，即：要把上面的两条语句改成写：
+
+```sql
+select * from t where city=&#34;杭州&#34; order by name limit 10100; 
+```
+
+```sql
+ select * from t where city=&#34;苏州&#34; order by name limit 10100。
+```
+
+这时候数据量较大，可以同时起两个连接一行行读结果，用归并排序算法拿到这两个结果集里，按顺序取第 10001~10100 的 name 值，就是需要的结果了。
+
+当然这个方案有一个明显的损失，就是从数据库返回给客户端的数据量变大了。所以，如果数据的单行比较大的话，可以考虑把这两条 SQL 语句改成下面这种写法：
+
+```sql
+select id,name from t where city=&#34;杭州&#34; order by name limit 10100; 
+```
+
+```sql
+select id,name from t where city=&#34;苏州&#34; order by name limit 10100。
+```
+
+然后，再用归并排序的方法取得按 name 顺序第 10001~10100 的 name、id 的值，然后拿着这 100 个 id 到数据库中去查出所有记录。上面这些方法，需要根据性能需求和开发的复杂度做出权衡。
 
 
 ---
