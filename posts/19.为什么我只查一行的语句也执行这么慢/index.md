@@ -7,7 +7,47 @@
 
 &lt;!--more--&gt;
 
+一般情况下，如果说查询性能优化，你首先会想到一些复杂的语句，想到查询需要返回大量的数据。但有些情况下，“查一行”，也会执行得特别慢。
+
+需要说明的是，如果 MySQL 数据库本身就有很大的压力，导致数据库服务器 CPU 占用率很高或 ioutil（IO 利用率）很高，这种情况下所有语句的执行都有可能变慢，不属于今天的讨论范围。
+
+为了便于描述，还是构造一个表，基于这个表来说明今天的问题。这个表有两个字段 id 和 c，并且在里面插入了 10 万行记录。
+
+```sql
+mysql&gt; CREATE TABLE `t` (
+  `id` int(11) NOT NULL,
+  `c` int(11) DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB;
+
+delimiter ;;
+create procedure idata()
+begin
+  declare i int;
+  set i=1;
+  while(i&lt;=100000) do
+    insert into t values(i,i);
+    set i=i&#43;1;
+  end while;
+end;;
+delimiter ;
+
+call idata();
+```
+
 ## 第一类：查询长时间不返回
+
+如下图所示，在表 t 执行下面的 SQL 语句：
+
+```sql
+mysql&gt; select * from t where id=1;
+```
+
+查询结果长时间不返回。
+
+![查询长时间不返回](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/8707b79d5ed906950749f5266014f22a.webp)
+
+
 
 ## 等 MDL 锁
 
