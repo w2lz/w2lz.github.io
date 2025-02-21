@@ -68,7 +68,7 @@ InnoDB 的默认事务隔离级别是可重复读，所以本文接下来没有�
 
 session B 的第二条语句 update t set c=5 where id=0，语义是“我把 id=0、d=5 这一行的 c 值，改成了 5”。
 
-由于在 T1 时刻，session A 还只是给 id=5 这一行加了行锁， 并没有给 id=0 这行加上锁。因此，session B 在 T2 时刻，是可以执行这两条 update 语句的。这样，就破坏了 session A 里 Q1 语句要锁住所有 d=5 的行的加锁声明。session C 也是一样的道理，对 id=1 这一行的修改，也是破坏了 Q1 的加锁声明。
+由于在 T1 时刻，session A 还只是给 id=5 这一行加了行锁，并没有给 id=0 这行加上锁。因此，session B 在 T2 时刻，是可以执行这两条 update 语句的。这样，就破坏了 session A 里 Q1 语句要锁住所有 d=5 的行的加锁声明。session C 也是一样的道理，对 id=1 这一行的修改，也是破坏了 Q1 的加锁声明。
 
 其次，是数据一致性的问题。
 
@@ -105,7 +105,7 @@ update t set c=5 where id=0; /*(0,5,5)*/
 insert into t values(1,1,5); /*(1,1,5)*/
 update t set c=5 where id=1; /*(1,5,5)*/
 
-update t set d=100 where d=5;/*所有d=5的行，d改成100*/
+update t set d=100 where d=5;/*所有 d=5 的行，d 改成 100*/
 ```
 
 你应该看出问题了。这个语句序列，不论是拿到备库去执行，还是以后用 binlog 来克隆一个库，这三行的结果，都变成了 (0,5,100)、(1,5,100) 和 (5,5,100)。也就是说，id=0 和 id=1 这两行，发生了数据不一致。这个问题很严重，是不行的。到这里，再回顾一下，这个数据不一致到底是怎么引入的？
@@ -122,7 +122,7 @@ update t set d=100 where d=5;/*所有d=5的行，d改成100*/
 insert into t values(1,1,5); /*(1,1,5)*/
 update t set c=5 where id=1; /*(1,5,5)*/
 
-update t set d=100 where d=5;/*所有d=5的行，d改成100*/
+update t set d=100 where d=5;/*所有 d=5 的行，d 改成 100*/
 
 update t set d=5 where id=0; /*(0,0,5)*/
 update t set c=5 where id=0; /*(0,5,5)*/
