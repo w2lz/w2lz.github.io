@@ -1,11 +1,22 @@
 # 一个 PHP 菜鸟的心路历程
 
-共计 28 篇文章
+共计 39 篇文章
 
 ## 2025
 
-共计 26 篇文章
+共计 37 篇文章
 
+- 02-23 [36 | 为什么临时表可以重名？](https://blog.yingnan.wang/posts/36.%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%B4%E6%97%B6%E8%A1%A8%E5%8F%AF%E4%BB%A5%E9%87%8D%E5%90%8D/ "2025-02-23 23:00:55")
+- 02-23 [35 | join 语句怎么优化？](https://blog.yingnan.wang/posts/35.join%E8%AF%AD%E5%8F%A5%E6%80%8E%E4%B9%88%E4%BC%98%E5%8C%96/ "2025-02-23 23:00:41")
+- 02-23 [34 | 到底可不可以使用 join？](https://blog.yingnan.wang/posts/34.%E5%88%B0%E5%BA%95%E5%8F%AF%E4%B8%8D%E5%8F%AF%E4%BB%A5%E4%BD%BF%E7%94%A8join/ "2025-02-23 23:00:27")
+- 02-23 [33 | 我查这么多数据，会不会把数据库内存打爆？](https://blog.yingnan.wang/posts/33.%E6%88%91%E6%9F%A5%E8%BF%99%E4%B9%88%E5%A4%9A%E6%95%B0%E6%8D%AE%E4%BC%9A%E4%B8%8D%E4%BC%9A%E6%8A%8A%E6%95%B0%E6%8D%AE%E5%BA%93%E5%86%85%E5%AD%98%E6%89%93%E7%88%86/ "2025-02-23 23:00:12")
+- 02-23 [32 | 为什么还有 kill 不掉的语句？](https://blog.yingnan.wang/posts/32.%E4%B8%BA%E4%BB%80%E4%B9%88%E8%BF%98%E6%9C%89kill%E4%B8%8D%E6%8E%89%E7%9A%84%E8%AF%AD%E5%8F%A5/ "2025-02-23 22:59:53")
+- 02-23 [31 | 误删数据后除了跑路，还能怎么办？](https://blog.yingnan.wang/posts/31.%E8%AF%AF%E5%88%A0%E6%95%B0%E6%8D%AE%E5%90%8E%E9%99%A4%E4%BA%86%E8%B7%91%E8%B7%AF%E8%BF%98%E8%83%BD%E6%80%8E%E4%B9%88%E5%8A%9E/ "2025-02-23 22:59:34")
+- 02-23 [30 | 答疑文章（二）：用动态的观点看加锁](https://blog.yingnan.wang/posts/30.%E7%AD%94%E7%96%91%E6%96%87%E7%AB%A0%E4%BA%8C%E7%94%A8%E5%8A%A8%E6%80%81%E7%9A%84%E8%A7%82%E7%82%B9%E7%9C%8B%E5%8A%A0%E9%94%81/ "2025-02-23 22:59:14")
+- 02-23 [29 | 如何判断一个数据库是不是出问题了？](https://blog.yingnan.wang/posts/29.%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%E4%B8%80%E4%B8%AA%E6%95%B0%E6%8D%AE%E5%BA%93%E6%98%AF%E4%B8%8D%E6%98%AF%E5%87%BA%E9%97%AE%E9%A2%98%E4%BA%86/ "2025-02-23 22:58:44")
+- 02-23 [28 | 读写分离有哪些坑？](https://blog.yingnan.wang/posts/28.%E8%AF%BB%E5%86%99%E5%88%86%E7%A6%BB%E6%9C%89%E5%93%AA%E4%BA%9B%E5%9D%91/ "2025-02-23 22:58:25")
+- 02-23 [27 | 主库出问题了，从库怎么办？](https://blog.yingnan.wang/posts/27.%E4%B8%BB%E5%BA%93%E5%87%BA%E9%97%AE%E9%A2%98%E4%BA%86%E4%BB%8E%E5%BA%93%E6%80%8E%E4%B9%88%E5%8A%9E/ "2025-02-23 22:58:06")
+- 02-23 [26 | 备库为什么会延迟好几个小时？](https://blog.yingnan.wang/posts/26.%E5%A4%87%E5%BA%93%E4%B8%BA%E4%BB%80%E4%B9%88%E4%BC%9A%E5%BB%B6%E8%BF%9F%E5%A5%BD%E5%87%A0%E4%B8%AA%E5%B0%8F%E6%97%B6/ "2025-02-23 22:57:39")
 - 02-16 [25 | MySQL 是怎么保证高可用的？](https://blog.yingnan.wang/posts/25.mysql%E6%98%AF%E6%80%8E%E4%B9%88%E4%BF%9D%E8%AF%81%E9%AB%98%E5%8F%AF%E7%94%A8%E7%9A%84/ "2025-02-16 21:58:56")
 - 02-16 [24 | MySQL 是怎么保证主备一致的？](https://blog.yingnan.wang/posts/24.mysql%E6%98%AF%E6%80%8E%E4%B9%88%E4%BF%9D%E8%AF%81%E4%B8%BB%E5%A4%87%E4%B8%80%E8%87%B4%E7%9A%84/ "2025-02-16 21:58:35")
 - 02-16 [23 | MySQL 是怎么保证数据不丢的？](https://blog.yingnan.wang/posts/23.mysql%E6%98%AF%E6%80%8E%E4%B9%88%E4%BF%9D%E8%AF%81%E6%95%B0%E6%8D%AE%E4%B8%8D%E4%B8%A2%E7%9A%84/ "2025-02-16 21:58:14")
