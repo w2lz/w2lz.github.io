@@ -234,6 +234,30 @@ binlog 在 MySQL 的各种高可用方案上扮演了重要角色。今天介绍
 
 问：上文说到的循环复制问题的时候，MySQL 通过判断 server id 的方式，断掉死循环。但是，这个机制其实并不完备，在某些场景下，还是有可能出现死循环。你能构造出一个这样的场景吗？又应该怎么解决呢？
 
+答：
+
+一种场景是，在一个主库更新事务后，用命令 set global server_id=x 修改了 server_id。等日志再传回来的时候，发现 server_id 跟自己的 server_id 不同，就只能执行了。
+
+另一种场景是，有三个节点的时候，如下图所示，trx1 是在节点 B 执行的，因此 binlog 上的 server_id 就是 B，binlog 传给节点 A，然后 A 和 A’搭建了双 M 结构，就会出现循环复制。
+
+![三节点循环复制](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/f968192ce2f436c939dd702b8f409771.webp)
+
+这种三节点复制的场景，做数据库迁移的时候会出现。如果出现了循环复制，可以在 A 或者 A’上，执行如下命令：
+
+```sql
+stop slave；
+CHANGE MASTER TO IGNORE_SERVER_IDS=(server_id_of_B);
+start slave;
+```
+
+这样这个节点收到日志后就不会再执行。过一段时间后，再执行下面的命令把这个值改回来。
+
+```sql
+stop slave；
+CHANGE MASTER TO IGNORE_SERVER_IDS=();
+start slave;
+```
+
 
 ---
 
