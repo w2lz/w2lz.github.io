@@ -221,9 +221,45 @@ master_auto_position=1
 
 ## GTID 和在线 DDL
 
+在双 M 结构下，备库执行的 DDL 语句也会传给主库，为了避免传回后对主库造成影响，要通过 set sql_log_bin=off 关掉 binlog。假设，这两个互为主备关系的库还是实例 X 和实例 Y，且当前主库是 X，并且都打开了 GTID 模式。这时的主备切换流程可以变成下面这样：
+
+- 在实例 X 上执行 stop slave。
+
+- 在实例 Y 上执行 DDL 语句。注意，这里并不需要关闭 binlog。
+
+- 执行完成后，查出这个 DDL 语句对应的 GTID，并记为 server_uuid_of_Y:gno。
+
+- 到实例 X 上执行以下语句序列：
+
+```sql
+set GTID_NEXT=&#34;server_uuid_of_Y:gno&#34;;
+begin;
+commit;
+set gtid_next=automatic;
+start slave;
+```
+
+这样做的目的在于，既可以让实例 Y 的更新有 binlog 记录，同时也可以确保不会在实例 X 上执行这条更新。
+
+接下来，执行完主备切换，然后照着上述流程再执行一遍即可。
+
 ## 小结
 
+一主多从的主备切换流程中，从库找新主库的位点是一个痛点。 MySQL 5.6 版本引入的 GTID 模式。在 GTID 模式下，一主多从切换就非常方便了。
+
 ## 问题
+
+问：在 GTID 模式下设置主从关系的时候，从库执行 start slave 命令后，主库发现需要的 binlog 已经被删除掉了，导致主备创建不成功。这种情况下，你觉得可以怎么处理呢？
+
+答：
+
+1. 如果业务允许主从不一致的情况，那么可以在主库上先执行 show global variables like ‘gtid_purged’，得到主库已经删除的 GTID 集合，假设是 gtid_purged1；然后先在从库上执行 reset master，再执行 set global gtid_purged =‘gtid_purged1’；最后执行 start slave，就会从主库现存的 binlog 开始同步。binlog 缺失的那一部分，数据在从库上就可能会有丢失，造成主从不一致。
+
+2. 如果需要主从数据一致的话，最好还是通过重新搭建从库来做。
+
+3. 如果有其他的从库保留有全量的 binlog 的话，可以把新的从库先接到这个保留了全量 binlog 的从库，追上日志以后，如果有需要，再接回主库。
+
+4. 如果 binlog 有备份的情况，可以先在从库上应用缺失的 binlog，然后再执行 start slave。
 
 
 ---

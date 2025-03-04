@@ -261,6 +261,14 @@ insert into t1 values(1,1,1),(2,2,2),(3,3,3),(4,4,4),(5,5,5);
 
 假设一个 MySQL 5.7.22 版本的主库，单线程插入了很多数据，过了 3 个小时后，要给这个主库搭建一个相同版本的备库。这时候，为了更快地让备库追上主库，要开并行复制。在 binlog-transaction-dependency-tracking 参数的 COMMIT_ORDER、WRITESET 和 WRITE_SESSION 这三个取值中，你会选择哪一个呢？
 
+答：应该将这个参数设置为 WRITESET。
+
+由于主库是单线程压力模式，所以每个事务的 commit_id 都不同，那么设置为 COMMIT_ORDER 模式的话，从库也只能单线程执行。
+
+同样地，由于 WRITESET_SESSION 模式要求在备库应用日志的时候，同一个线程的日志必须与主库上执行的先后顺序相同，也会导致主库单线程压力模式下退化成单线程复制。
+
+所以，应该将 binlog-transaction-dependency-tracking 设置为 WRITESET。
+
 
 ---
 
