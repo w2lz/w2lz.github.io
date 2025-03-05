@@ -11,7 +11,7 @@
 
 读写分离的主要目标就是分摊主库的压力。上图中的结构是客户端（client）主动做负载均衡，这种模式下一般会把数据库的连接信息放在客户端的连接层。也就是说，由客户端来选择后端数据库进行查询。
 
-还有一种架构是，在 MySQL 和客户端之间有一个中间代理层 proxy，客户端只连接 proxy， 由 proxy 根据请求类型和上下文决定请求的分发路由。
+还有一种架构是，在 MySQL 和客户端之间有一个中间代理层 proxy，客户端只连接 proxy，由 proxy 根据请求类型和上下文决定请求的分发路由。
 
 ![带 proxy 的读写分离架构](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/1b1ea74a48e1a16409e9b4d02172b945.webp)
 
@@ -57,7 +57,7 @@
 
 要确保备库无延迟，通常有三种做法。
 
-第一种确保主备无延迟的方法是，每次从库执行查询请求前，先判断 seconds_behind_master 是否已经等于 0。如果还不等于 0 ，那就必须等到这个参数变为 0 才能执行查询请求。seconds_behind_master 的单位是秒，如果觉得精度不够的话，还可以采用对比位点和 GTID 的方法来确保主备无延迟。如下图所示，是一个 show slave status 结果的部分截图。
+第一种确保主备无延迟的方法是，每次从库执行查询请求前，先判断 seconds_behind_master 是否已经等于 0。如果还不等于 0，那就必须等到这个参数变为 0 才能执行查询请求。seconds_behind_master 的单位是秒，如果觉得精度不够的话，还可以采用对比位点和 GTID 的方法来确保主备无延迟。如下图所示，是一个 show slave status 结果的部分截图。
 
 ![show slave status 结果](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/00110923007513e865d7f43a124887c1.webp)
 
@@ -73,7 +73,7 @@
 
 第三种方法，对比 GTID 集合确保主备无延迟：
 
-- Auto_Position=1 ，表示这对主备关系使用了 GTID 协议。
+- Auto_Position=1，表示这对主备关系使用了 GTID 协议。
 
 - Retrieved_Gtid_Set，是备库收到的所有日志的 GTID 集合；
 

@@ -53,7 +53,7 @@ MySQL 的并行复制策略是解决备库延迟问题的关键。在 MySQL 5.5 
 
 ![按表并行复制程模型](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/8b6976fedd6e644022d4026581fb8d76.webp)
 
-可以看到，每个 worker 线程对应一个 hash 表，用于保存当前正在这个 worker 的“执行队列”里的事务所涉及的表。hash 表的 key 是“库名. 表名”，value 是一个数字，表示队列中有多少个事务修改这个表。
+可以看到，每个 worker 线程对应一个 hash 表，用于保存当前正在这个 worker 的“执行队列”里的事务所涉及的表。hash 表的 key 是“库名。表名”，value 是一个数字，表示队列中有多少个事务修改这个表。
 
 在有事务分配给 worker 时，事务里面涉及的表会被加到对应的 hash 表中。worker 执行完成后，这个表会被从 hash 表中去掉。
 
@@ -113,7 +113,7 @@ insert into t1 values(1,1,1),(2,2,2),(3,3,3),(4,4,4),(5,5,5);
 
 因此，基于行的策略，事务 hash 表中还需要考虑唯一键，即 key 应该是“库名 &#43; 表名 &#43; 索引 a 的名字 &#43;a 的值”。
 
-比如，在上面这个例子中，要在表 t1 上执行 update t1 set a=1 where id=2 语句，在 binlog 里面记录了整行的数据修改前各个字段的值，和修改后各个字段的值。因此，coordinator 在解析这个语句的 binlog 的时候，这个事务的 hash 表就有三个项:
+比如，在上面这个例子中，要在表 t1 上执行 update t1 set a=1 where id=2 语句，在 binlog 里面记录了整行的数据修改前各个字段的值，和修改后各个字段的值。因此，coordinator 在解析这个语句的 binlog 的时候，这个事务的 hash 表就有三个项：
 
 1. key=hash_func(db1&#43;t1&#43;“PRIMARY”&#43;2), value=2; 这里 value=2 是因为修改前后的行 id 值不变，出现了两次。
 
@@ -165,7 +165,7 @@ insert into t1 values(1,1,1),(2,2,2),(3,3,3),(4,4,4),(5,5,5);
 
 ## MariaDB 的并行复制策略
 
-之前介绍过 redo log 组提交 (group commit) 优化， 而 MariaDB 的并行复制策略利用的就是这个特性：
+之前介绍过 redo log 组提交 (group commit) 优化，而 MariaDB 的并行复制策略利用的就是这个特性：
 
 1. 能够在同一组里提交的事务，一定不会修改同一行；
 

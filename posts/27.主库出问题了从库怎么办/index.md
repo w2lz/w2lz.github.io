@@ -11,7 +11,7 @@
 
 ![一主多从基本结构](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/aadb3b956d1ffc13ac46515a7d619e79.webp)
 
-图中，虚线箭头表示的是主备关系，也就是 A 和 A’互为主备， 从库 B、C、D 指向的是主库 A。一主多从的设置，一般用于读写分离，主库负责所有的写入和一部分读，其他的读请求则由从库分担。今天要讨论的就是，在一主多从架构下，主库故障后的主备切换问题。
+图中，虚线箭头表示的是主备关系，也就是 A 和 A’互为主备，从库 B、C、D 指向的是主库 A。一主多从的设置，一般用于读写分离，主库负责所有的写入和一部分读，其他的读请求则由从库分担。今天要讨论的就是，在一主多从架构下，主库故障后的主备切换问题。
 
 如下图所示，就是主库发生故障，主备切换后的结果。
 
@@ -59,17 +59,17 @@ mysqlbinlog File --stop-datetime=T --start-datetime=T
 
 ![mysqlbinlog 部分输出结果](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/3471dfe4aebcccfaec0523a08cdd0ddd.webp)
 
-图中，end_log_pos 后面的值“123”，表示的就是 A’这个实例，在 T 时刻写入新的 binlog 的位置。然后，就可以把 123 这个值作为 $master_log_pos ，用在节点 B 的 change master 命令里。当然这个值并不精确。为什么呢？
+图中，end_log_pos 后面的值“123”，表示的就是 A’这个实例，在 T 时刻写入新的 binlog 的位置。然后，就可以把 123 这个值作为 $master_log_pos，用在节点 B 的 change master 命令里。当然这个值并不精确。为什么呢？
 
 你可以设想有这么一种情况，假设在 T 这个时刻，主库 A 已经执行完成了一个 insert 语句插入了一行数据 R，并且已经将 binlog 传给了 A’和 B，然后在传完的瞬间主库 A 的主机就掉电了。那么，这时候系统的状态是这样的：
 
-1. 在从库 B 上，由于同步了 binlog， R 这一行已经存在；
+1. 在从库 B 上，由于同步了 binlog，R 这一行已经存在；
 
-2. 在新主库 A’上， R 这一行也已经存在，日志是写在 123 这个位置之后的；
+2. 在新主库 A’上，R 这一行也已经存在，日志是写在 123 这个位置之后的；
 
 3. 我们在从库 B 上执行 change master 命令，指向 A’的 File 文件的 123 位置，就会把插入 R 这一行数据的 binlog 又同步到从库 B 去执行。
 
-这时候，从库 B 的同步线程就会报告 Duplicate entry ‘id_of_R’ for key ‘PRIMARY’ 错误，提示出现了主键冲突，然后停止同步。
+这时候，从库 B 的同步线程就会报告 Duplicate entry‘id_of_R’for key‘PRIMARY’错误，提示出现了主键冲突，然后停止同步。
 
 所以，通常情况下，在切换任务的时候，要先主动跳过这些错误，有两种常用的方法。
 
@@ -88,7 +88,7 @@ start slave;
 
 - 1032 错误是删除数据时找不到行。
 
-因此，可以把 slave_skip_errors 设置为 “1032,1062”，这样中间碰到这两个错误时就直接跳过。这里需要注意的是，这种直接跳过指定错误的方法，针对的是主备切换时，由于找不到精确的同步位点，所以只能采用这种方法来创建从库和新主库的主备关系。
+因此，可以把 slave_skip_errors 设置为“1032,1062”，这样中间碰到这两个错误时就直接跳过。这里需要注意的是，这种直接跳过指定错误的方法，针对的是主备切换时，由于找不到精确的同步位点，所以只能采用这种方法来创建从库和新主库的主备关系。
 
 这个背景是，我们很清楚在主备切换过程中，直接跳过 1032 和 1062 这两类错误是无损的，所以才可以这么设置 slave_skip_errors 参数。等到主备间的同步关系建立完成，并稳定执行一段时间之后，还需要把这个参数设置为空，以免之后真的出现了主从数据不一致，也跳过了。
 
@@ -148,7 +148,7 @@ insert into t values(1,1);
 
 ![初始化数据的 binlog](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/28a5cab0079fb12fd5abecd92b3324c2.webp)
 
-可以看到，事务的 BEGIN 之前有一条 SET @@SESSION.GTID_NEXT 命令。这时，如果实例 X 有从库，那么将 CREATE TABLE 和 insert 语句的 binlog 同步过去执行的话，执行事务之前就会先执行这两个 SET 命令， 这样被加入从库的 GTID 集合的，就是图中的这两个 GTID。
+可以看到，事务的 BEGIN 之前有一条 SET @@SESSION.GTID_NEXT 命令。这时，如果实例 X 有从库，那么将 CREATE TABLE 和 insert 语句的 binlog 同步过去执行的话，执行事务之前就会先执行这两个 SET 命令，这样被加入从库的 GTID 集合的，就是图中的这两个 GTID。
 
 假设，现在这个实例 X 是另外一个实例 Y 的从库，并且此时在实例 Y 上执行了下面这条插入语句：
 
@@ -156,7 +156,7 @@ insert into t values(1,1);
 insert into t values(1,1);
 ```
 
-并且，这条语句在实例 Y 上的 GTID 是 “aaaaaaaa-cccc-dddd-eeee-ffffffffffff:10”。那么，实例 X 作为 Y 的从库，就要同步这个事务过来执行，显然会出现主键冲突，导致实例 X 的同步线程停止。这时，应该怎么处理呢？处理方法就是，你可以执行下面的这个语句序列：
+并且，这条语句在实例 Y 上的 GTID 是“aaaaaaaa-cccc-dddd-eeee-ffffffffffff:10”。那么，实例 X 作为 Y 的从库，就要同步这个事务过来执行，显然会出现主键冲突，导致实例 X 的同步线程停止。这时，应该怎么处理呢？处理方法就是，你可以执行下面的这个语句序列：
 
 ```sql
 set gtid_next=&#39;aaaaaaaa-cccc-dddd-eeee-ffffffffffff:10&#39;;
@@ -215,7 +215,7 @@ master_auto_position=1
 
 之后这个系统就由新主库 A’写入，主库 A’的自己生成的 binlog 中的 GTID 集合格式是：server_uuid_of_A’:1-M。
 
-如果之前从库 B 的 GTID 集合格式是 server_uuid_of_A:1-N， 那么切换之后 GTID 集合的格式就变成了 server_uuid_of_A:1-N, server_uuid_of_A’:1-M。
+如果之前从库 B 的 GTID 集合格式是 server_uuid_of_A:1-N，那么切换之后 GTID 集合的格式就变成了 server_uuid_of_A:1-N, server_uuid_of_A’:1-M。
 
 当然，主库 A’之前也是 A 的备库，因此主库 A’和从库 B 的 GTID 集合是一样的。这就达到了预期。
 
@@ -245,7 +245,7 @@ start slave;
 
 ## 小结
 
-一主多从的主备切换流程中，从库找新主库的位点是一个痛点。 MySQL 5.6 版本引入的 GTID 模式。在 GTID 模式下，一主多从切换就非常方便了。
+一主多从的主备切换流程中，从库找新主库的位点是一个痛点。MySQL 5.6 版本引入的 GTID 模式。在 GTID 模式下，一主多从切换就非常方便了。
 
 ## 问题
 
@@ -253,7 +253,7 @@ start slave;
 
 答：
 
-1. 如果业务允许主从不一致的情况，那么可以在主库上先执行 show global variables like ‘gtid_purged’，得到主库已经删除的 GTID 集合，假设是 gtid_purged1；然后先在从库上执行 reset master，再执行 set global gtid_purged =‘gtid_purged1’；最后执行 start slave，就会从主库现存的 binlog 开始同步。binlog 缺失的那一部分，数据在从库上就可能会有丢失，造成主从不一致。
+1. 如果业务允许主从不一致的情况，那么可以在主库上先执行 show global variables like‘gtid_purged’，得到主库已经删除的 GTID 集合，假设是 gtid_purged1；然后先在从库上执行 reset master，再执行 set global gtid_purged =‘gtid_purged1’；最后执行 start slave，就会从主库现存的 binlog 开始同步。binlog 缺失的那一部分，数据在从库上就可能会有丢失，造成主从不一致。
 
 2. 如果需要主从数据一致的话，最好还是通过重新搭建从库来做。
 

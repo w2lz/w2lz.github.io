@@ -31,7 +31,7 @@ CREATE TABLE `t` (
 
 设置 innodb_thread_concurrency 参数的目的是，控制 InnoDB 的并发线程上限。也就是说，一旦并发线程数达到这个值，InnoDB 在接收到新请求的时候，就会进入等待状态，直到有线程退出。这里，把 innodb_thread_concurrency 设置成 3，表示 InnoDB 只允许 3 个线程并行执行。而在例子中，前三个 session 中的 sleep(100)，使得这三个语句都处于“执行”状态，以此来模拟大查询。
 
-可以看到， session D 里面，select 1 是能执行成功的，但是查询表 t 的语句会被堵住。也就是说，如果这时候用 select 1 来检测实例是否正常的话，是检测不出问题的。
+可以看到，session D 里面，select 1 是能执行成功的，但是查询表 t 的语句会被堵住。也就是说，如果这时候用 select 1 来检测实例是否正常的话，是检测不出问题的。
 
 在 InnoDB 中，innodb_thread_concurrency 这个参数的默认值是 0，表示不限制并发线程数量。但是，不限制并发线程数肯定是不行的。因为，一个机器的 CPU 核数有限，线程全冲进来，上下文切换的成本就会太高。
 
@@ -45,7 +45,7 @@ CREATE TABLE `t` (
 
 MySQL 这样设计是非常有意义的。因为，进入锁等待的线程已经不吃 CPU 了；更重要的是，必须这么设计，才能避免整个系统锁死。为什么呢？假设处于锁等待的线程也占并发线程的计数，可以设想一下这个场景：
 
-1. 线程 1 执行 begin; update t set c=c&#43;1 where id=1, 启动了事务 trx1， 然后保持这个状态。这时候，线程处于空闲状态，不算在并发线程里面。
+1. 线程 1 执行 begin; update t set c=c&#43;1 where id=1, 启动了事务 trx1，然后保持这个状态。这时候，线程处于空闲状态，不算在并发线程里面。
 
 2. 线程 2 到线程 129 都执行 update t set c=c&#43;1 where id=1; 由于等行锁，进入等待状态。这样就有 128 个线程处于等待状态；
 
@@ -126,7 +126,7 @@ insert into mysql.health_check(id, t_modified) values (@@server_id, now()) on du
 
 图中这一行表示统计的是 redo log 的写入时间，第一列 EVENT_NAME 表示统计的类型。接下来的三组数据，显示的是 redo log 操作的时间统计。
 
-第一组五列，是所有 IO 类型的统计。其中，COUNT_STAR 是所有 IO 的总次数，接下来四列是具体的统计项， 单位是皮秒；前缀 SUM、MIN、AVG、MAX，顾名思义指的就是总和、最小值、平均值和最大值。
+第一组五列，是所有 IO 类型的统计。其中，COUNT_STAR 是所有 IO 的总次数，接下来四列是具体的统计项，单位是皮秒；前缀 SUM、MIN、AVG、MAX，顾名思义指的就是总和、最小值、平均值和最大值。
 
 第二组六列，是读操作的统计。最后一列 SUM_NUMBER_OF_BYTES_READ 统计的是，总共从 redo log 里读了多少个字节。
 
@@ -161,10 +161,6 @@ mysql&gt; truncate table performance_schema.file_summary_by_event_name;
 你看完后可能会觉得，select 1 这样的方法是不是已经被淘汰了呢，但实际上使用非常广泛的 MHA（Master High Availability），默认使用的就是这个方法。
 
 其实，每个改进的方案，都会增加额外损耗，并不能用“对错”做直接判断，需要根据业务实际情况去做权衡。
-
-## 问题
-
-问：业务系统一般也有高可用的需求，在开发和维护过的服务中，你是怎么判断服务有没有出问题的呢？
 
 
 ---
