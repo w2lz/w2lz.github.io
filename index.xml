@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>一个 PHP 菜鸟的心路历程</title><link>https://blog.yingnan.wang/</link><description>一个北漂的内蒙汉子，喜欢瞎折腾、写东西，分享一些后端开发中的所见、所闻、所思。</description><generator>Hugo 0.145.0 &amp; FixIt v0.3.17-8b402129</generator><language>zh-CN</language><managingEditor>wangyingnan@88.com (w2lz)</managingEditor><webMaster>wangyingnan@88.com (w2lz)</webMaster><copyright>本站内容采用 CC BY-NC-SA 4.0 国际许可协议。</copyright><lastBuildDate>Tue, 04 Mar 2025 12:53:30 +0000</lastBuildDate><atom:link href="https://blog.yingnan.wang/index.xml" rel="self" type="application/rss+xml"/><item><title>36 | 为什么临时表可以重名？</title><link>https://blog.yingnan.wang/posts/36.%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%B4%E6%97%B6%E8%A1%A8%E5%8F%AF%E4%BB%A5%E9%87%8D%E5%90%8D/</link><pubDate>Sun, 23 Feb 2025 23:00:55 +0800</pubDate><author>wangyingnan@88.com (w2lz)</author><guid>https://blog.yingnan.wang/posts/36.%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%B4%E6%97%B6%E8%A1%A8%E5%8F%AF%E4%BB%A5%E9%87%8D%E5%90%8D/</guid><category domain="https://blog.yingnan.wang/categories/mysql-%E5%AE%9E%E6%88%98-45-%E8%AE%B2/">MySQL 实战 45 讲</category><category domain="https://blog.yingnan.wang/categories/mysql/">MySQL</category><description>&lt;div class="details admonition quote open">
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>一个 PHP 菜鸟的心路历程</title><link>https://blog.yingnan.wang/</link><description>一个北漂的内蒙汉子，喜欢瞎折腾、写东西，分享一些后端开发中的所见、所闻、所思。</description><generator>Hugo 0.145.0 &amp; FixIt v0.3.17-8b402129</generator><language>zh-CN</language><managingEditor>wangyingnan@88.com (w2lz)</managingEditor><webMaster>wangyingnan@88.com (w2lz)</webMaster><copyright>本站内容采用 CC BY-NC-SA 4.0 国际许可协议。</copyright><lastBuildDate>Wed, 05 Mar 2025 01:09:17 +0000</lastBuildDate><atom:link href="https://blog.yingnan.wang/index.xml" rel="self" type="application/rss+xml"/><item><title>36 | 为什么临时表可以重名？</title><link>https://blog.yingnan.wang/posts/36.%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%B4%E6%97%B6%E8%A1%A8%E5%8F%AF%E4%BB%A5%E9%87%8D%E5%90%8D/</link><pubDate>Sun, 23 Feb 2025 23:00:55 +0800</pubDate><author>wangyingnan@88.com (w2lz)</author><guid>https://blog.yingnan.wang/posts/36.%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%B4%E6%97%B6%E8%A1%A8%E5%8F%AF%E4%BB%A5%E9%87%8D%E5%90%8D/</guid><category domain="https://blog.yingnan.wang/categories/mysql-%E5%AE%9E%E6%88%98-45-%E8%AE%B2/">MySQL 实战 45 讲</category><category domain="https://blog.yingnan.wang/categories/mysql/">MySQL</category><description>&lt;div class="details admonition quote open">
  &lt;div class="details-summary admonition-title">&lt;i class="icon fa-fw fa-solid fa-quote-right" aria-hidden="true">&lt;/i>摘要&lt;i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true">&lt;/i>&lt;/div>
  &lt;div class="details-content">
  &lt;div class="admonition-content">临时表在 MySQL 中具有独特的特性，适合于复杂查询优化和分库分表系统中的应用。与内存表不同，临时表可以使用各种引擎类型，包括 InnoDB 和 MyISAM 引擎，且可以与普通表同名。由于临时表只能被创建它的 session 访问，对其他线程不可见，并且在 session 结束时会自动删除，因此特别适合于避免表名重复导致建表失败的问题和不需要额外的数据清理操作。临时表经常被用于复杂查询的优化过程中，尤其在分库分表系统的跨库查询中发挥重要作用&lt;/div>
@@ -172,11 +172,69 @@
  &lt;div class="admonition-content">本文深入探讨了 InnoDB 的加锁规则，通过具体案例分析，动态解析了加锁过程。文章首先回顾了加锁规则，包括 next-key lock 作为基本单位、访问对象才会加锁等内容。随后，通过查询案例分析了不等号条件中的等值查询和并发执行可能出现的死锁问题。&lt;/div>
  &lt;/div>
 &lt;/div>
-&lt;h2 id="不等号条件里的等值查询" class="heading-element">&lt;span>1 不等号条件里的等值查询&lt;/span>
+&lt;p>复习一下加锁规则。这个规则中，包含了两个“原则”、两个“优化”和一个“bug”：&lt;/p>
+&lt;ul>
+&lt;li>
+&lt;p>原则 1：加锁的基本单位是 next-key lock，next-key lock 是前开后闭区间。&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>原则 2：查找过程中访问到的对象才会加锁。&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>优化 1：索引上的等值查询，给唯一索引加锁的时候，next-key lock 退化为行锁。&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>优化 2：索引上的等值查询，向右遍历时且最后一个值不满足等值条件的时候，next-key lock 退化为间隙锁。&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>一个 bug：唯一索引上的范围查询会访问到不满足条件的第一个值为止。&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;p>接下来的讨论基于下面这个表 t：&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-sql" data-lang="sql">&lt;span class="line">&lt;span class="cl">&lt;span class="k">CREATE&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">TABLE&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="o">`&lt;/span>&lt;span class="n">t&lt;/span>&lt;span class="o">`&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="o">`&lt;/span>&lt;span class="n">id&lt;/span>&lt;span class="o">`&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="nb">int&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="mi">11&lt;/span>&lt;span class="p">)&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">NOT&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">NULL&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="o">`&lt;/span>&lt;span class="k">c&lt;/span>&lt;span class="o">`&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="nb">int&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="mi">11&lt;/span>&lt;span class="p">)&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">DEFAULT&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">NULL&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="o">`&lt;/span>&lt;span class="n">d&lt;/span>&lt;span class="o">`&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="nb">int&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="mi">11&lt;/span>&lt;span class="p">)&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">DEFAULT&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">NULL&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="k">PRIMARY&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">KEY&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="o">`&lt;/span>&lt;span class="n">id&lt;/span>&lt;span class="o">`&lt;/span>&lt;span class="p">),&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="k">KEY&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="o">`&lt;/span>&lt;span class="k">c&lt;/span>&lt;span class="o">`&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="o">`&lt;/span>&lt;span class="k">c&lt;/span>&lt;span class="o">`&lt;/span>&lt;span class="p">)&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">&lt;/span>&lt;span class="p">)&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="n">ENGINE&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="n">InnoDB&lt;/span>&lt;span class="p">;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">&lt;/span>&lt;span class="k">insert&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">into&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="n">t&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">values&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="mi">0&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="mi">0&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="mi">0&lt;/span>&lt;span class="p">),(&lt;/span>&lt;span class="mi">5&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="mi">5&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="mi">5&lt;/span>&lt;span class="p">),&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="mi">10&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="mi">10&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="mi">10&lt;/span>&lt;span class="p">),(&lt;/span>&lt;span class="mi">15&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="mi">15&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="mi">15&lt;/span>&lt;span class="p">),(&lt;/span>&lt;span class="mi">20&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="mi">20&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="mi">20&lt;/span>&lt;span class="p">),(&lt;/span>&lt;span class="mi">25&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="mi">25&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="mi">25&lt;/span>&lt;span class="p">);&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;h2 id="不等号条件里的等值查询" class="heading-element">&lt;span>1 不等号条件里的等值查询&lt;/span>
  &lt;a href="#%e4%b8%8d%e7%ad%89%e5%8f%b7%e6%9d%a1%e4%bb%b6%e9%87%8c%e7%9a%84%e7%ad%89%e5%80%bc%e6%9f%a5%e8%af%a2" class="heading-mark">
  &lt;svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true">&lt;path d="m7.775 3.275 1.25-1.25a3.5 3.5 0 1 1 4.95 4.95l-2.5 2.5a3.5 3.5 0 0 1-4.95 0 .751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018 1.998 1.998 0 0 0 2.83 0l2.5-2.5a2.002 2.002 0 0 0-2.83-2.83l-1.25 1.25a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042Zm-4.69 9.64a1.998 1.998 0 0 0 2.83 0l1.25-1.25a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042l-1.25 1.25a3.5 3.5 0 1 1-4.95-4.95l2.5-2.5a3.5 3.5 0 0 1 4.95 0 .751.751 0 0 1-.018 1.042.751.751 0 0 1-1.042.018 1.998 1.998 0 0 0-2.83 0l-2.5 2.5a1.998 1.998 0 0 0 0 2.83Z">&lt;/path>&lt;/svg>
  &lt;/a>
-&lt;/h2>&lt;h2 id="等值查询的过程" class="heading-element">&lt;span>2 等值查询的过程&lt;/span>
+&lt;/h2>&lt;p>先来一起来看下这个例子，分析一下这条查询语句的加锁范围：&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-sql" data-lang="sql">&lt;span class="line">&lt;span class="cl">&lt;span class="k">begin&lt;/span>&lt;span class="p">;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">&lt;/span>&lt;span class="k">select&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="o">*&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">from&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="n">t&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">where&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="n">id&lt;/span>&lt;span class="o">&amp;gt;&lt;/span>&lt;span class="mi">9&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">and&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="n">id&lt;/span>&lt;span class="o">&amp;lt;&lt;/span>&lt;span class="mi">12&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">order&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">by&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="n">id&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">desc&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">for&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">update&lt;/span>&lt;span class="p">;&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>利用上面的加锁规则，我们知道这个语句的加锁范围是主键索引上的 (0,5]、(5,10]和 (10, 15)。也就是说，id=15 这一行，并没有被加上行锁。为什么呢？&lt;/p>
+&lt;p>我们说加锁单位是 next-key lock，都是前开后闭区间，但是这里用到了优化 2，即索引上的等值查询，向右遍历的时候 id=15 不满足条件，所以 next-key lock 退化为了间隙锁 (10, 15)。&lt;/p>
+&lt;p>但是，查询语句中 where 条件是大于号和小于号，这里的“等值查询”又是从哪里来的呢？要知道，加锁动作是发生在语句执行过程中的，所以你分析加锁行为的时候，要从索引上的数据结构开始。这里再把这个过程拆解一下。如下图所示，是这个表的索引 id 的示意图。&lt;/p>
+&lt;p>&lt;img loading="lazy" src="https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/ac1aa07860c565b907b32c5f75c4f2bb.webp" alt="索引 id 示意图" srcset="https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/ac1aa07860c565b907b32c5f75c4f2bb.webp?size=small, https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/ac1aa07860c565b907b32c5f75c4f2bb.webp?size=medium 1.5x, https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/ac1aa07860c565b907b32c5f75c4f2bb.webp?size=large 2x" data-title="索引 id 示意图" style="background: url(/images/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;for(const i of ['style', 'data-title','onerror','onload']){this.removeAttribute(i);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;for(const i of ['style', 'data-title','onerror','onload']){this.removeAttribute(i);}"/>&lt;/p>
+&lt;h2 id="等值查询的过程" class="heading-element">&lt;span>2 等值查询的过程&lt;/span>
  &lt;a href="#%e7%ad%89%e5%80%bc%e6%9f%a5%e8%af%a2%e7%9a%84%e8%bf%87%e7%a8%8b" class="heading-mark">
  &lt;svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true">&lt;path d="m7.775 3.275 1.25-1.25a3.5 3.5 0 1 1 4.95 4.95l-2.5 2.5a3.5 3.5 0 0 1-4.95 0 .751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018 1.998 1.998 0 0 0 2.83 0l2.5-2.5a2.002 2.002 0 0 0-2.83-2.83l-1.25 1.25a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042Zm-4.69 9.64a1.998 1.998 0 0 0 2.83 0l1.25-1.25a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042l-1.25 1.25a3.5 3.5 0 1 1-4.95-4.95l2.5-2.5a3.5 3.5 0 0 1 4.95 0 .751.751 0 0 1-.018 1.042.751.751 0 0 1-1.042.018 1.998 1.998 0 0 0-2.83 0l-2.5 2.5a1.998 1.998 0 0 0 0 2.83Z">&lt;/path>&lt;/svg>
  &lt;/a>
@@ -266,23 +324,109 @@
  &lt;a href="#%e6%9f%a5%e8%a1%a8%e5%88%a4%e6%96%ad" class="heading-mark">
  &lt;svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true">&lt;path d="m7.775 3.275 1.25-1.25a3.5 3.5 0 1 1 4.95 4.95l-2.5 2.5a3.5 3.5 0 0 1-4.95 0 .751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018 1.998 1.998 0 0 0 2.83 0l2.5-2.5a2.002 2.002 0 0 0-2.83-2.83l-1.25 1.25a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042Zm-4.69 9.64a1.998 1.998 0 0 0 2.83 0l1.25-1.25a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042l-1.25 1.25a3.5 3.5 0 1 1-4.95-4.95l2.5-2.5a3.5 3.5 0 0 1 4.95 0 .751.751 0 0 1-.018 1.042.751.751 0 0 1-1.042.018 1.998 1.998 0 0 0-2.83 0l-2.5 2.5a1.998 1.998 0 0 0 0 2.83Z">&lt;/path>&lt;/svg>
  &lt;/a>
-&lt;/h2>&lt;h2 id="更新判断" class="heading-element">&lt;span>3 更新判断&lt;/span>
+&lt;/h2>&lt;p>为了能够检测 InnoDB 并发线程数过多导致的系统不可用情况，需要找一个访问 InnoDB 的场景。一般的做法是，在系统库（mysql 库）里创建一个表，比如命名为 health_check，里面只放一行数据，然后定期执行：&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-sql" data-lang="sql">&lt;span class="line">&lt;span class="cl">&lt;span class="n">mysql&lt;/span>&lt;span class="o">&amp;gt;&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">select&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="o">*&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">from&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="n">mysql&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="n">health_check&lt;/span>&lt;span class="p">;&lt;/span>&lt;span class="w"> &lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>使用这个方法，可以检测出由于并发线程过多导致的数据库不可用的情况。但是马上还会碰到下一个问题，即：空间满了以后，这种方法又会变得不好使。&lt;/p>
+&lt;p>更新事务要写 binlog，而一旦 binlog 所在磁盘的空间占用率达到 100%，那么所有的更新语句和事务提交的 commit 语句就都会被堵住。但是，系统这时候还是可以正常读数据的。&lt;/p>
+&lt;p>因此，还是把这条监控语句再改进一下。接下来就看看把查询语句改成更新语句后的效果。&lt;/p>
+&lt;h2 id="更新判断" class="heading-element">&lt;span>3 更新判断&lt;/span>
  &lt;a href="#%e6%9b%b4%e6%96%b0%e5%88%a4%e6%96%ad" class="heading-mark">
  &lt;svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true">&lt;path d="m7.775 3.275 1.25-1.25a3.5 3.5 0 1 1 4.95 4.95l-2.5 2.5a3.5 3.5 0 0 1-4.95 0 .751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018 1.998 1.998 0 0 0 2.83 0l2.5-2.5a2.002 2.002 0 0 0-2.83-2.83l-1.25 1.25a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042Zm-4.69 9.64a1.998 1.998 0 0 0 2.83 0l1.25-1.25a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042l-1.25 1.25a3.5 3.5 0 1 1-4.95-4.95l2.5-2.5a3.5 3.5 0 0 1 4.95 0 .751.751 0 0 1-.018 1.042.751.751 0 0 1-1.042.018 1.998 1.998 0 0 0-2.83 0l-2.5 2.5a1.998 1.998 0 0 0 0 2.83Z">&lt;/path>&lt;/svg>
  &lt;/a>
-&lt;/h2>&lt;h2 id="内部统计" class="heading-element">&lt;span>4 内部统计&lt;/span>
+&lt;/h2>&lt;p>既然要更新，就要放个有意义的字段，常见做法是放一个 timestamp 字段，用来表示最后一次执行检测的时间。这条更新语句类似于：&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-sql" data-lang="sql">&lt;span class="line">&lt;span class="cl">&lt;span class="n">mysql&lt;/span>&lt;span class="o">&amp;gt;&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">update&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="n">mysql&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="n">health_check&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">set&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="n">t_modified&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="n">now&lt;/span>&lt;span class="p">();&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>节点可用性的检测都应该包含主库和备库。如果用更新来检测主库的话，那么备库也要进行更新检测。&lt;/p>
+&lt;p>但，备库的检测也是要写 binlog 的。由于一般会把数据库 A 和 B 的主备关系设计为双 M 结构，所以在备库 B 上执行的检测命令，也要发回给主库 A。&lt;/p>
+&lt;p>但是，如果主库 A 和备库 B 都用相同的更新命令，就可能出现行冲突，也就是可能会导致主备同步停止。所以，现在看来 mysql.health_check 这个表就不能只有一行数据了。&lt;/p>
+&lt;p>为了让主备之间的更新不产生冲突，可以在 mysql.health_check 表上存入多行数据，并用 A、B 的 server_id 做主键。&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;span class="lnt">3
+&lt;/span>&lt;span class="lnt">4
+&lt;/span>&lt;span class="lnt">5
+&lt;/span>&lt;span class="lnt">6
+&lt;/span>&lt;span class="lnt">7
+&lt;/span>&lt;span class="lnt">8
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-sql" data-lang="sql">&lt;span class="line">&lt;span class="cl">&lt;span class="n">mysql&lt;/span>&lt;span class="o">&amp;gt;&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">CREATE&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">TABLE&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="o">`&lt;/span>&lt;span class="n">health_check&lt;/span>&lt;span class="o">`&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="o">`&lt;/span>&lt;span class="n">id&lt;/span>&lt;span class="o">`&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="nb">int&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="mi">11&lt;/span>&lt;span class="p">)&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">NOT&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">NULL&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="o">`&lt;/span>&lt;span class="n">t_modified&lt;/span>&lt;span class="o">`&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">timestamp&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">NOT&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">NULL&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">DEFAULT&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">CURRENT_TIMESTAMP&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="k">PRIMARY&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">KEY&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="o">`&lt;/span>&lt;span class="n">id&lt;/span>&lt;span class="o">`&lt;/span>&lt;span class="p">)&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">&lt;/span>&lt;span class="p">)&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="n">ENGINE&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="n">InnoDB&lt;/span>&lt;span class="p">;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">&lt;/span>&lt;span class="cm">/* 检测命令 */&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">&lt;/span>&lt;span class="k">insert&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">into&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="n">mysql&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="n">health_check&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">id&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="n">t_modified&lt;/span>&lt;span class="p">)&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">values&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="o">@@&lt;/span>&lt;span class="n">server_id&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="n">now&lt;/span>&lt;span class="p">())&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">on&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="n">duplicate&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">key&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">update&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="n">t_modified&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="n">now&lt;/span>&lt;span class="p">();&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>由于 MySQL 规定了主库和备库的 server_id 必须不同（否则创建主备关系的时候就会报错），这样就可以保证主、备库各自的检测命令不会发生冲突。&lt;/p>
+&lt;p>更新判断是一个相对比较常用的方案了，不过依然存在一些问题。其中，“判定慢”一直是让 DBA 头疼的问题。但是，更新语句，如果失败或者超时，就可以发起主备切换了，为什么还会有判定慢的问题呢？其实，这里涉及到的是服务器 IO 资源分配的问题。&lt;/p>
+&lt;p>首先，所有的检测逻辑都需要一个超时时间 N。执行一条 update 语句，超过 N 秒后还不返回，就认为系统不可用。可以设想一个日志盘的 IO 利用率已经是 100% 的场景。这时候，整个系统响应非常慢，已经需要做主备切换了。&lt;/p>
+&lt;p>但是你要知道，IO 利用率 100% 表示系统的 IO 是在工作的，每个请求都有机会获得 IO 资源，执行自己的任务。而检测使用的 update 命令，需要的资源很少，所以可能在拿到 IO 资源的时候就可以提交成功，并且在超时时间 N 秒未到达之前就返回给了检测系统。检测系统一看，update 命令没有超时，于是就得到了“系统正常”的结论。&lt;/p>
+&lt;p>也就是说，这时候在业务系统上正常的 SQL 语句已经执行得很慢了，但是 DBA 上去一看，HA 系统还在正常工作，并且认为主库现在处于可用状态。之所以会出现这个现象，根本原因是上面说的所有方法，都是基于外部检测的。外部检测天然有一个问题，就是随机性。&lt;/p>
+&lt;p>因为，外部检测都需要定时轮询，所以系统可能已经出问题了，但是却需要等到下一个检测发起执行语句的时候，才有可能发现问题。而且，如果运气不够好的话，可能第一次轮询还不能发现，这就会导致切换慢的问题。&lt;/p>
+&lt;h2 id="内部统计" class="heading-element">&lt;span>4 内部统计&lt;/span>
  &lt;a href="#%e5%86%85%e9%83%a8%e7%bb%9f%e8%ae%a1" class="heading-mark">
  &lt;svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true">&lt;path d="m7.775 3.275 1.25-1.25a3.5 3.5 0 1 1 4.95 4.95l-2.5 2.5a3.5 3.5 0 0 1-4.95 0 .751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018 1.998 1.998 0 0 0 2.83 0l2.5-2.5a2.002 2.002 0 0 0-2.83-2.83l-1.25 1.25a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042Zm-4.69 9.64a1.998 1.998 0 0 0 2.83 0l1.25-1.25a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042l-1.25 1.25a3.5 3.5 0 1 1-4.95-4.95l2.5-2.5a3.5 3.5 0 0 1 4.95 0 .751.751 0 0 1-.018 1.042.751.751 0 0 1-1.042.018 1.998 1.998 0 0 0-2.83 0l-2.5 2.5a1.998 1.998 0 0 0 0 2.83Z">&lt;/path>&lt;/svg>
  &lt;/a>
-&lt;/h2>&lt;h2 id="小结" class="heading-element">&lt;span>5 小结&lt;/span>
+&lt;/h2>&lt;p>针对磁盘利用率这个问题，如果 MySQL 可以告诉我们，内部每一次 IO 请求的时间，那我们判断数据库是否出问题的方法就可靠得多了。&lt;/p>
+&lt;p>其实，MySQL 5.6 版本以后提供的 performance_schema 库，就在 file_summary_by_event_name 表里统计了每次 IO 请求的时间。file_summary_by_event_name 表里有很多行数据，先来看看 event_name=&amp;lsquo;wait/io/file/innodb/innodb_log_file’这一行。&lt;/p>
+&lt;p>&lt;img loading="lazy" src="https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/752ccfe43b4eab155be17401838c62dd.webp" alt="performance_schema.file_summary_by_event_name 的一行" srcset="https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/752ccfe43b4eab155be17401838c62dd.webp?size=small, https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/752ccfe43b4eab155be17401838c62dd.webp?size=medium 1.5x, https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/752ccfe43b4eab155be17401838c62dd.webp?size=large 2x" data-title="performance_schema.file_summary_by_event_name 的一行" style="background: url(/images/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;for(const i of ['style', 'data-title','onerror','onload']){this.removeAttribute(i);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;for(const i of ['style', 'data-title','onerror','onload']){this.removeAttribute(i);}"/>&lt;/p>
+&lt;p>图中这一行表示统计的是 redo log 的写入时间，第一列 EVENT_NAME 表示统计的类型。接下来的三组数据，显示的是 redo log 操作的时间统计。&lt;/p>
+&lt;p>第一组五列，是所有 IO 类型的统计。其中，COUNT_STAR 是所有 IO 的总次数，接下来四列是具体的统计项， 单位是皮秒；前缀 SUM、MIN、AVG、MAX，顾名思义指的就是总和、最小值、平均值和最大值。&lt;/p>
+&lt;p>第二组六列，是读操作的统计。最后一列 SUM_NUMBER_OF_BYTES_READ 统计的是，总共从 redo log 里读了多少个字节。&lt;/p>
+&lt;p>第三组六列，统计的是写操作。&lt;/p>
+&lt;p>最后的第四组数据，是对其他类型数据的统计。在 redo log 里，可以认为它们就是对 fsync 的统计。&lt;/p>
+&lt;p>在 performance_schema 库的 file_summary_by_event_name 表里，binlog 对应的是 event_name = &amp;ldquo;wait/io/file/sql/binlog&amp;quot;这一行。各个字段的统计逻辑，与 redo log 的各个字段完全相同。&lt;/p>
+&lt;p>因为每一次操作数据库，performance_schema 都需要额外地统计这些信息，所以打开这个统计功能是有性能损耗的。测试结果是，如果打开所有的 performance_schema 项，性能大概会下降 10% 左右。所以，建议你只打开自己需要的项进行统计。可以通过下面的方法打开或者关闭某个具体项的统计。如果要打开 redo log 的时间监控，可以执行这个语句：&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-sql" data-lang="sql">&lt;span class="line">&lt;span class="cl">&lt;span class="n">mysql&lt;/span>&lt;span class="o">&amp;gt;&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">update&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="n">setup_instruments&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">set&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="n">ENABLED&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s1">&amp;#39;YES&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="n">Timed&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s1">&amp;#39;YES&amp;#39;&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">where&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="n">name&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">like&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="s1">&amp;#39;%wait/io/file/innodb/innodb_log_file%&amp;#39;&lt;/span>&lt;span class="p">;&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>假设，现在已经开启了 redo log 和 binlog 这两个统计信息，那要怎么把这个信息用在实例状态诊断上呢？很简单，可以通过 MAX_TIMER 的值来判断数据库是否出问题了。比如，可以设定阈值，单次 IO 请求时间超过 200 毫秒属于异常，然后使用类似下面这条语句作为检测逻辑。&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-sql" data-lang="sql">&lt;span class="line">&lt;span class="cl">&lt;span class="n">mysql&lt;/span>&lt;span class="o">&amp;gt;&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">select&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="n">event_name&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="n">MAX_TIMER_WAIT&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">FROM&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="n">performance_schema&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="n">file_summary_by_event_name&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">where&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="n">event_name&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">in&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s1">&amp;#39;wait/io/file/innodb/innodb_log_file&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="s1">&amp;#39;wait/io/file/sql/binlog&amp;#39;&lt;/span>&lt;span class="p">)&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">and&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="n">MAX_TIMER_WAIT&lt;/span>&lt;span class="o">&amp;gt;&lt;/span>&lt;span class="mi">200&lt;/span>&lt;span class="o">*&lt;/span>&lt;span class="mi">1000000000&lt;/span>&lt;span class="p">;&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>发现异常后，取到需要的信息，再通过下面这条语句：&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-sql" data-lang="sql">&lt;span class="line">&lt;span class="cl">&lt;span class="n">mysql&lt;/span>&lt;span class="o">&amp;gt;&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">truncate&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">table&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="n">performance_schema&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="n">file_summary_by_event_name&lt;/span>&lt;span class="p">;&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>把之前的统计信息清空。这样如果后面的监控中，再次出现这个异常，就可以加入监控累积值了。&lt;/p>
+&lt;h2 id="小结" class="heading-element">&lt;span>5 小结&lt;/span>
  &lt;a href="#%e5%b0%8f%e7%bb%93" class="heading-mark">
  &lt;svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true">&lt;path d="m7.775 3.275 1.25-1.25a3.5 3.5 0 1 1 4.95 4.95l-2.5 2.5a3.5 3.5 0 0 1-4.95 0 .751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018 1.998 1.998 0 0 0 2.83 0l2.5-2.5a2.002 2.002 0 0 0-2.83-2.83l-1.25 1.25a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042Zm-4.69 9.64a1.998 1.998 0 0 0 2.83 0l1.25-1.25a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042l-1.25 1.25a3.5 3.5 0 1 1-4.95-4.95l2.5-2.5a3.5 3.5 0 0 1 4.95 0 .751.751 0 0 1-.018 1.042.751.751 0 0 1-1.042.018 1.998 1.998 0 0 0-2.83 0l-2.5 2.5a1.998 1.998 0 0 0 0 2.83Z">&lt;/path>&lt;/svg>
  &lt;/a>
-&lt;/h2>&lt;h2 id="问题" class="heading-element">&lt;span>6 问题&lt;/span>
+&lt;/h2>&lt;p>你看完后可能会觉得，select 1 这样的方法是不是已经被淘汰了呢，但实际上使用非常广泛的 MHA（Master High Availability），默认使用的就是这个方法。&lt;/p>
+&lt;p>其实，每个改进的方案，都会增加额外损耗，并不能用“对错”做直接判断，需要根据业务实际情况去做权衡。&lt;/p>
+&lt;h2 id="问题" class="heading-element">&lt;span>6 问题&lt;/span>
  &lt;a href="#%e9%97%ae%e9%a2%98" class="heading-mark">
  &lt;svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true">&lt;path d="m7.775 3.275 1.25-1.25a3.5 3.5 0 1 1 4.95 4.95l-2.5 2.5a3.5 3.5 0 0 1-4.95 0 .751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018 1.998 1.998 0 0 0 2.83 0l2.5-2.5a2.002 2.002 0 0 0-2.83-2.83l-1.25 1.25a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042Zm-4.69 9.64a1.998 1.998 0 0 0 2.83 0l1.25-1.25a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042l-1.25 1.25a3.5 3.5 0 1 1-4.95-4.95l2.5-2.5a3.5 3.5 0 0 1 4.95 0 .751.751 0 0 1-.018 1.042.751.751 0 0 1-1.042.018 1.998 1.998 0 0 0-2.83 0l-2.5 2.5a1.998 1.998 0 0 0 0 2.83Z">&lt;/path>&lt;/svg>
  &lt;/a>
-&lt;/h2></description></item><item><title>28 | 读写分离有哪些坑？</title><link>https://blog.yingnan.wang/posts/28.%E8%AF%BB%E5%86%99%E5%88%86%E7%A6%BB%E6%9C%89%E5%93%AA%E4%BA%9B%E5%9D%91/</link><pubDate>Sun, 23 Feb 2025 22:58:25 +0800</pubDate><author>wangyingnan@88.com (w2lz)</author><guid>https://blog.yingnan.wang/posts/28.%E8%AF%BB%E5%86%99%E5%88%86%E7%A6%BB%E6%9C%89%E5%93%AA%E4%BA%9B%E5%9D%91/</guid><category domain="https://blog.yingnan.wang/categories/mysql-%E5%AE%9E%E6%88%98-45-%E8%AE%B2/">MySQL 实战 45 讲</category><category domain="https://blog.yingnan.wang/categories/mysql/">MySQL</category><description>&lt;div class="details admonition quote open">
+&lt;/h2>&lt;p>问：业务系统一般也有高可用的需求，在开发和维护过的服务中，你是怎么判断服务有没有出问题的呢？&lt;/p></description></item><item><title>28 | 读写分离有哪些坑？</title><link>https://blog.yingnan.wang/posts/28.%E8%AF%BB%E5%86%99%E5%88%86%E7%A6%BB%E6%9C%89%E5%93%AA%E4%BA%9B%E5%9D%91/</link><pubDate>Sun, 23 Feb 2025 22:58:25 +0800</pubDate><author>wangyingnan@88.com (w2lz)</author><guid>https://blog.yingnan.wang/posts/28.%E8%AF%BB%E5%86%99%E5%88%86%E7%A6%BB%E6%9C%89%E5%93%AA%E4%BA%9B%E5%9D%91/</guid><category domain="https://blog.yingnan.wang/categories/mysql-%E5%AE%9E%E6%88%98-45-%E8%AE%B2/">MySQL 实战 45 讲</category><category domain="https://blog.yingnan.wang/categories/mysql/">MySQL</category><description>&lt;div class="details admonition quote open">
  &lt;div class="details-summary admonition-title">&lt;i class="icon fa-fw fa-solid fa-quote-right" aria-hidden="true">&lt;/i>摘要&lt;i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true">&lt;/i>&lt;/div>
  &lt;div class="details-content">
  &lt;div class="admonition-content">本文深入探讨了数据库架构中的读写分离问题及解决方案。首先介绍了两种读写分离架构：客户端直连和带 proxy 的架构，并分析了它们的特点和优劣。随后讨论了由于主从延迟导致的“过期读”问题，并提出了多种处理过期读的方案，包括强制走主库、sleep 方案等。文章提出了更准确的方案，如判断主备无延迟方案、配合 semi-sync 方案等。在确保主备无延迟的方法中，通过对比位点和 GTID 的方法更准确。文章还介绍了 semi-sync replication 和等主库位点方案，以解决过期读问题。&lt;/div>
@@ -546,7 +690,9 @@
  &lt;a href="#%e9%97%ae%e9%a2%98" class="heading-mark">
  &lt;svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true">&lt;path d="m7.775 3.275 1.25-1.25a3.5 3.5 0 1 1 4.95 4.95l-2.5 2.5a3.5 3.5 0 0 1-4.95 0 .751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018 1.998 1.998 0 0 0 2.83 0l2.5-2.5a2.002 2.002 0 0 0-2.83-2.83l-1.25 1.25a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042Zm-4.69 9.64a1.998 1.998 0 0 0 2.83 0l1.25-1.25a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042l-1.25 1.25a3.5 3.5 0 1 1-4.95-4.95l2.5-2.5a3.5 3.5 0 0 1 4.95 0 .751.751 0 0 1-.018 1.042.751.751 0 0 1-1.042.018 1.998 1.998 0 0 0-2.83 0l-2.5 2.5a1.998 1.998 0 0 0 0 2.83Z">&lt;/path>&lt;/svg>
  &lt;/a>
-&lt;/h2>&lt;p>问：假设你的系统采用了文中介绍的最后一个方案，也就是等 GTID 的方案，现在要对主库的一张大表做 DDL，可能会出现什么情况呢？为了避免这种情况，你会怎么做呢？&lt;/p></description></item><item><title>27 | 主库出问题了，从库怎么办？</title><link>https://blog.yingnan.wang/posts/27.%E4%B8%BB%E5%BA%93%E5%87%BA%E9%97%AE%E9%A2%98%E4%BA%86%E4%BB%8E%E5%BA%93%E6%80%8E%E4%B9%88%E5%8A%9E/</link><pubDate>Sun, 23 Feb 2025 22:58:06 +0800</pubDate><author>wangyingnan@88.com (w2lz)</author><guid>https://blog.yingnan.wang/posts/27.%E4%B8%BB%E5%BA%93%E5%87%BA%E9%97%AE%E9%A2%98%E4%BA%86%E4%BB%8E%E5%BA%93%E6%80%8E%E4%B9%88%E5%8A%9E/</guid><category domain="https://blog.yingnan.wang/categories/mysql-%E5%AE%9E%E6%88%98-45-%E8%AE%B2/">MySQL 实战 45 讲</category><category domain="https://blog.yingnan.wang/categories/mysql/">MySQL</category><description>&lt;div class="details admonition quote open">
+&lt;/h2>&lt;p>问：假设你的系统采用了文中介绍的最后一个方案，也就是等 GTID 的方案，现在要对主库的一张大表做 DDL，可能会出现什么情况呢？为了避免这种情况，你会怎么做呢？&lt;/p>
+&lt;p>答：假设，这条语句在主库上要执行 10 分钟，提交后传到备库就要 10 分钟（典型的大事务）。那么，在主库 DDL 之后再提交的事务的 GTID，去备库查的时候，就会等 10 分钟才出现。这样，这个读写分离机制在这 10 分钟之内都会超时，然后走主库。&lt;/p>
+&lt;p>这种预期内的操作，应该在业务低峰期的时候，确保主库能够支持所有业务查询，然后把读请求都切到主库，再在主库上做 DDL。等备库延迟追上以后，再把读请求切回备库。&lt;/p></description></item><item><title>27 | 主库出问题了，从库怎么办？</title><link>https://blog.yingnan.wang/posts/27.%E4%B8%BB%E5%BA%93%E5%87%BA%E9%97%AE%E9%A2%98%E4%BA%86%E4%BB%8E%E5%BA%93%E6%80%8E%E4%B9%88%E5%8A%9E/</link><pubDate>Sun, 23 Feb 2025 22:58:06 +0800</pubDate><author>wangyingnan@88.com (w2lz)</author><guid>https://blog.yingnan.wang/posts/27.%E4%B8%BB%E5%BA%93%E5%87%BA%E9%97%AE%E9%A2%98%E4%BA%86%E4%BB%8E%E5%BA%93%E6%80%8E%E4%B9%88%E5%8A%9E/</guid><category domain="https://blog.yingnan.wang/categories/mysql-%E5%AE%9E%E6%88%98-45-%E8%AE%B2/">MySQL 实战 45 讲</category><category domain="https://blog.yingnan.wang/categories/mysql/">MySQL</category><description>&lt;div class="details admonition quote open">
  &lt;div class="details-summary admonition-title">&lt;i class="icon fa-fw fa-solid fa-quote-right" aria-hidden="true">&lt;/i>摘要&lt;i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true">&lt;/i>&lt;/div>
  &lt;div class="details-content">
  &lt;div class="admonition-content">在一主多从架构下，主库出现故障后，从库如何处理是一个关键问题。本文深入探讨了基于位点和 GTID 的主备切换方法，并详细介绍了在切换过程中可能出现的数据同步问题及解决方案。GTID（全局事务 ID）作为解决主备切换困难的利器被详细介绍，其生成方式和启动模式都得到了清晰的阐述。文章还通过具体的例子展示了 GTID 的基本用法，以及基于 GTID 的主备切换的实现逻辑。通过 GTID 模式，主备切换不再需要手动找位点，而是在实例内部自动完成，极大地简化了操作流程。&lt;/div>
