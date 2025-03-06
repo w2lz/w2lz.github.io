@@ -230,6 +230,17 @@ select id from t where c in(5,20,10) order by c desc for update;
 
 问：所谓“间隙”，其实根本就是由“这个间隙右边的那个记录”定义的。那么，一个空表有间隙吗？这个间隙是由谁定义的？怎么验证这个结论呢？
 
+答：一个空表就只有一个间隙。比如，在空表上执行：
+
+```sql
+begin;
+select * from t where id&gt;1 for update;
+```
+
+这个查询语句加锁的范围就是 next-key lock (-∞, supremum]。验证方法的话，可以使用下面的操作序列。可以在下图中看到显示的结果。
+
+![show engine innodb status 部分结果](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/531b6556ffc82c6b02f9a010a3ceb09f.webp)
+
 
 ---
 
