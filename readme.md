@@ -1,11 +1,20 @@
 # 一个 PHP 菜鸟的心路历程
 
-共计 39 篇文章
+共计 48 篇文章
 
 ## 2025
 
-共计 37 篇文章
+共计 46 篇文章
 
+- 03-10 [45 | 自增 id 用完怎么办？](https://blog.yingnan.wang/posts/45.%E8%87%AA%E5%A2%9Eid%E7%94%A8%E5%AE%8C%E6%80%8E%E4%B9%88%E5%8A%9E/ "2025-03-10 08:58:39")
+- 03-10 [44 | 答疑文章（三）：说一说这些好问题](https://blog.yingnan.wang/posts/44.%E7%AD%94%E7%96%91%E6%96%87%E7%AB%A0%E4%B8%89%E8%AF%B4%E4%B8%80%E8%AF%B4%E8%BF%99%E4%BA%9B%E5%A5%BD%E9%97%AE%E9%A2%98/ "2025-03-10 08:58:21")
+- 03-10 [43 | 要不要使用分区表？](https://blog.yingnan.wang/posts/43.%E8%A6%81%E4%B8%8D%E8%A6%81%E4%BD%BF%E7%94%A8%E5%88%86%E5%8C%BA%E8%A1%A8/ "2025-03-10 08:57:58")
+- 03-10 [42 | grant 之后要跟着 flush privileges 吗？](https://blog.yingnan.wang/posts/42.grant%E4%B9%8B%E5%90%8E%E8%A6%81%E8%B7%9F%E7%9D%80flush-privileges%E5%90%97/ "2025-03-10 08:57:39")
+- 03-10 [41 | 怎么最快地复制一张表？](https://blog.yingnan.wang/posts/41.%E6%80%8E%E4%B9%88%E6%9C%80%E5%BF%AB%E5%9C%B0%E5%A4%8D%E5%88%B6%E4%B8%80%E5%BC%A0%E8%A1%A8/ "2025-03-10 08:56:49")
+- 03-10 [40 | insert 语句的锁为什么这么多？](https://blog.yingnan.wang/posts/40.insert%E8%AF%AD%E5%8F%A5%E7%9A%84%E9%94%81%E4%B8%BA%E4%BB%80%E4%B9%88%E8%BF%99%E4%B9%88%E5%A4%9A/ "2025-03-10 08:56:27")
+- 03-10 [39 | 自增主键为什么不是连续的？](https://blog.yingnan.wang/posts/39.%E8%87%AA%E5%A2%9E%E4%B8%BB%E9%94%AE%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%8D%E6%98%AF%E8%BF%9E%E7%BB%AD%E7%9A%84/ "2025-03-10 08:56:01")
+- 03-10 [38 | 都说 InnoDB 好，那还要不要使用 Memory 引擎？](https://blog.yingnan.wang/posts/38.%E9%83%BD%E8%AF%B4innodb%E5%A5%BD%E9%82%A3%E8%BF%98%E8%A6%81%E4%B8%8D%E8%A6%81%E4%BD%BF%E7%94%A8memory%E5%BC%95%E6%93%8E/ "2025-03-10 08:55:37")
+- 03-10 [37 | 什么时候会使用内部临时表？](https://blog.yingnan.wang/posts/37.%E4%BB%80%E4%B9%88%E6%97%B6%E5%80%99%E4%BC%9A%E4%BD%BF%E7%94%A8%E5%86%85%E9%83%A8%E4%B8%B4%E6%97%B6%E8%A1%A8/ "2025-03-10 08:55:11")
 - 02-23 [36 | 为什么临时表可以重名？](https://blog.yingnan.wang/posts/36.%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%B4%E6%97%B6%E8%A1%A8%E5%8F%AF%E4%BB%A5%E9%87%8D%E5%90%8D/ "2025-02-23 23:00:55")
 - 02-23 [35 | join 语句怎么优化？](https://blog.yingnan.wang/posts/35.join%E8%AF%AD%E5%8F%A5%E6%80%8E%E4%B9%88%E4%BC%98%E5%8C%96/ "2025-02-23 23:00:41")
 - 02-23 [34 | 到底可不可以使用 join？](https://blog.yingnan.wang/posts/34.%E5%88%B0%E5%BA%95%E5%8F%AF%E4%B8%8D%E5%8F%AF%E4%BB%A5%E4%BD%BF%E7%94%A8join/ "2025-02-23 23:00:27")
