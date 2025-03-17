@@ -135,7 +135,7 @@ select id%100 as m, count(*) as c from t1 group by m order by null limit 10;
 
 把内存临时表的大小限制为最大 1024 字节，并把语句改成 id % 100，这样返回结果里有 100 行数据。但是，这时的内存临时表大小不够存下这 100 行数据，也就是说，执行过程中会发现内存临时表大小到达了上限（1024 字节）。
 
-那么，这时候就会把内存临时表转成磁盘临时表，磁盘临时表默认使用的引擎是 InnoDB。 这时，返回的结果如下图所示。
+那么，这时候就会把内存临时表转成磁盘临时表，磁盘临时表默认使用的引擎是 InnoDB。这时，返回的结果如下图所示。
 
 ![group &#43; order by null 的结果（磁盘临时表）](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/a76381d0f3c947292cc28198901f9e6e.webp)
 
@@ -195,7 +195,7 @@ select SQL_BIG_RESULT id%100 as m, count(*) as c from t1 group by m;
 
 1. 初始化 sort_buffer，确定放入一个整型字段，记为 m；
 
-2. 扫描表 t1 的索引 a，依次取出里面的 id 值, 将 id%100 的值存入 sort_buffer 中；
+2. 扫描表 t1 的索引 a，依次取出里面的 id 值，将 id%100 的值存入 sort_buffer 中；
 
 3. 扫描完成后，对 sort_buffer 的字段 m 做排序（如果 sort_buffer 内存不够用，就会利用磁盘临时文件辅助排序）；
 
@@ -215,7 +215,7 @@ select SQL_BIG_RESULT id%100 as m, count(*) as c from t1 group by m;
 
 2. join_buffer 是无序数组，sort_buffer 是有序数组，临时表是二维表结构；
 
-3. 如果执行逻辑需要用到二维表特性，就会优先考虑使用临时表。比如上面的例子中，union 需要用到唯一索引约束， group by 还需要用到另外一个字段来存累积计数。
+3. 如果执行逻辑需要用到二维表特性，就会优先考虑使用临时表。比如上面的例子中，union 需要用到唯一索引约束，group by 还需要用到另外一个字段来存累积计数。
 
 ## 小结
 

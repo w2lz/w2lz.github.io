@@ -9,7 +9,7 @@
 
 ## 内存表的数据组织结构
 
-假设有以下的两张表 t1 和 t2，其中表 t1 使用 Memory 引擎， 表 t2 使用 InnoDB 引擎。
+假设有以下的两张表 t1 和 t2，其中表 t1 使用 Memory 引擎，表 t2 使用 InnoDB 引擎。
 
 ```sql
 create table t1(id int primary key, c int) engine=Memory;
@@ -70,7 +70,7 @@ select * from t1;
 select * from t1 where id&lt;5;
 ```
 
-是用不上主键索引的，需要走全表扫描。那如果要让内存表支持范围扫描，应该怎么办呢 ？
+是用不上主键索引的，需要走全表扫描。那如果要让内存表支持范围扫描，应该怎么办呢？
 
 ## hash 索引和 B-Tree 索引
 
@@ -88,7 +88,7 @@ alter table t1 add index a_btree_index using btree (id);
 
 ![使用 B-Tree 和 hash 索引查询返回结果对比](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/a85808fcccab24911d257d720550328a.webp)
 
-可以看到，执行 select * from t1 where id&lt;5 的时候，优化器会选择 B-Tree 索引，所以返回结果是 0 到 4。 使用 force index 强行使用主键 id 这个索引，id=0 这一行就在结果集的最末尾了。
+可以看到，执行 select * from t1 where id&lt;5 的时候，优化器会选择 B-Tree 索引，所以返回结果是 0 到 4。使用 force index 强行使用主键 id 这个索引，id=0 这一行就在结果集的最末尾了。
 
 其实，一般在我们的印象中，内存表的优势是速度快，其中的一个原因就是 Memory 引擎支持 hash 索引。当然，更重要的原因是，内存表的所有数据都保存在内存，而内存的读写速度总是比磁盘快。但是，接下来要说明，为什么不建议在生产环境上使用内存表。这里的原因主要包括两个方面：
 
@@ -162,7 +162,7 @@ insert into temp_t select * from t2 where b&gt;=1 and b&lt;=2000;
 select * from t1 join temp_t on (t1.b=temp_t.b);
 ```
 
-了解了内存表的特性就知道了， 其实这里使用内存临时表的效果更好，原因有三个：
+了解了内存表的特性就知道了，其实这里使用内存临时表的效果更好，原因有三个：
 
 1. 相比于 InnoDB 表，使用内存表不需要写磁盘，往表 temp_t 的写数据的速度更快；
 

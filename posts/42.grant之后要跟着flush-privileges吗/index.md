@@ -146,7 +146,7 @@ flush privileges 语句本身会用数据表的数据重建一份内存权限数
 grant super on *.* to &#39;ua&#39;@&#39;%&#39; identified by &#39;pa&#39;;
 ```
 
-这条命令加了 identified by ‘密码’， 语句的逻辑里面除了赋权外，还包含了：
+这条命令加了 identified by‘密码’，语句的逻辑里面除了赋权外，还包含了：
 
 1. 如果用户’ua’@’%&#39;不存在，就创建这个用户，密码是 pa；
 

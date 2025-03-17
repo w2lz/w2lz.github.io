@@ -40,7 +40,7 @@ insert into t2(c,d) select c,d from t;
 
 ![并发 insert 场景](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/33e513ee55d5700dc67f32bcdafb9386.webp)
 
-实际的执行效果是，如果 session B 先执行，由于这个语句对表 t 主键索引加了 (-∞,1]这个 next-key lock，会在语句执行完成后，才允许 session A 的 insert 语句执行。
+实际的执行效果是，如果 session B 先执行，由于这个语句对表 t 主键索引加了 (-∞,1] 这个 next-key lock，会在语句执行完成后，才允许 session A 的 insert 语句执行。
 
 但如果没有锁的话，就可能出现 session B 的 insert 语句先执行，但是后写入 binlog 的情况。于是，在 binlog_format=statement 的情况下，binlog 里面就记录了这样的语句序列：
 
@@ -53,13 +53,13 @@ insert into t2(c,d) select c,d from t;
 
 ## insert 循环写入
 
-当然了，执行 insert … select 的时候，对目标表也不是锁全表，而是只锁住需要访问的资源。如果现在有这么一个需求：要往表 t2 中插入一行数据，这一行的 c 值是表 t 中 c 值的最大值加 1。此时，可以这么写这条 SQL 语句 ：
+当然了，执行 insert … select 的时候，对目标表也不是锁全表，而是只锁住需要访问的资源。如果现在有这么一个需求：要往表 t2 中插入一行数据，这一行的 c 值是表 t 中 c 值的最大值加 1。此时，可以这么写这条 SQL 语句：
 
 ```sql
 insert into t2(c,d)  (select c&#43;1, d from t force index(c) order by c desc limit 1);
 ```
 
-这个语句的加锁范围，就是表 t 索引 c 上的 (3,4]和 (4,supremum]这两个 next-key lock，以及主键索引上 id=4 这一行。
+这个语句的加锁范围，就是表 t 索引 c 上的 (3,4] 和 (4,supremum] 这两个 next-key lock，以及主键索引上 id=4 这一行。
 
 它的执行流程也比较简单，从表 t 中按照索引 c 倒序，扫描第一行，拿到结果写入到表 t2 中。因此整条语句的扫描行数是 1。这个语句执行的慢查询日志（slow log），如下图所示：
 
@@ -118,7 +118,7 @@ drop table temp_t;
 
 这个例子也是在可重复读（repeatable read）隔离级别下执行的。可以看到，session B 要执行的 insert 语句进入了锁等待状态。
 
-也就是说，session A 执行的 insert 语句，发生唯一键冲突的时候，并不只是简单地报错返回，还在冲突的索引上加了锁。前面说过，一个 next-key lock 就是由它右边界的值定义的。这时候，session A 持有索引 c 上的 (5,10]共享 next-key lock（读锁）。
+也就是说，session A 执行的 insert 语句，发生唯一键冲突的时候，并不只是简单地报错返回，还在冲突的索引上加了锁。前面说过，一个 next-key lock 就是由它右边界的值定义的。这时候，session A 持有索引 c 上的 (5,10] 共享 next-key lock（读锁）。
 
 再分享一个经典的死锁场景：
 
@@ -152,7 +152,7 @@ insert into … on duplicate key update 这个语义的逻辑是，插入一行�
 
 可以看到，主键 id 是先判断的，MySQL 认为这个语句跟 id=2 这一行冲突，所以修改的是 id=2 的行。
 
-需要注意的是，执行这条语句的 affected rows 返回的是 2，很容易造成误解。实际上，真正更新的只有一行，只是在代码实现上，insert 和 update 都认为自己成功了，update 计数加了 1， insert 计数也加了 1。
+需要注意的是，执行这条语句的 affected rows 返回的是 2，很容易造成误解。实际上，真正更新的只有一行，只是在代码实现上，insert 和 update 都认为自己成功了，update 计数加了 1，insert 计数也加了 1。
 
 ## 小结
 

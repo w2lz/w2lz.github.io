@@ -73,7 +73,7 @@ MySQL 中的 kill 命令有两种形式：kill query 和 kill connection，分�
 
 那为什么执行 show processlist 的时候，会看到 Command 列显示为 killed 呢？其实，这就是因为在执行 show processlist 的时候，有一个特别的逻辑：
 
-如果一个线程的状态是KILL_CONNECTION，就把Command列显示成Killed。
+如果一个线程的状态是 KILL_CONNECTION，就把 Command 列显示成 Killed。
 
 所以其实，即使是客户端退出了，这个线程的状态仍然是在等待中。那这个线程什么时候会退出呢？答案是，只有等到满足进入 InnoDB 的条件后，session C 的查询语句继续执行，然后才有可能判断到线程状态已经变成了 KILL_QUERY 或者 KILL_CONNECTION，再进入终止逻辑阶段。到这里，来小结一下。
 

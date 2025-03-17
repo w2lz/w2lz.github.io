@@ -64,7 +64,7 @@ select * from t1 where a&gt;=1 and a&lt;=100;
 
 这里，read_rnd_buffer 的大小是由 read_rnd_buffer_size 参数控制的。如果步骤 1 中，read_rnd_buffer 放满了，就会先执行完步骤 2 和 3，然后清空 read_rnd_buffer。之后继续找索引 a 的下个记录，并继续循环。
 
-另外需要说明的是，如果想要稳定地使用 MRR 优化的话，需要设置set optimizer_switch=&#34;mrr_cost_based=off&#34;。（官方文档的说法，是现在的优化器策略，判断消耗的时候，会更倾向于不使用 MRR，把 mrr_cost_based 设置为 off，就是固定使用 MRR 了。）下面两幅图就是使用了 MRR 优化后的执行流程和 explain 结果。
+另外需要说明的是，如果想要稳定地使用 MRR 优化的话，需要设置 set optimizer_switch=&#34;mrr_cost_based=off&#34;。（官方文档的说法，是现在的优化器策略，判断消耗的时候，会更倾向于不使用 MRR，把 mrr_cost_based 设置为 off，就是固定使用 MRR 了。）下面两幅图就是使用了 MRR 优化后的执行流程和 explain 结果。
 
 ![MRR 执行流程](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/d502fbaea7cac6f815c626b078da86c7.webp)
 

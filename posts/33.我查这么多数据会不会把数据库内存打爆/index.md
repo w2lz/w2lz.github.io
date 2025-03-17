@@ -43,7 +43,7 @@ mysql -h$host -P$port -u$user -p$pwd -e &#34;select * from db1.t&#34; &gt; $targ
 
 也就是说，MySQL 是“边读边发的”，这个概念很重要。这就意味着，如果客户端接收得慢，会导致 MySQL 服务端由于结果发不出去，这个事务的执行时间变长。
 
-比如下面这个状态，就是.故意让客户端不去读 socket receive buffer 中的内容，然后在服务端 show processlist 看到的结果。
+比如下面这个状态，就是。故意让客户端不去读 socket receive buffer 中的内容，然后在服务端 show processlist 看到的结果。
 
 ![服务端发送阻塞](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/183a704d4495bebbc13c524695b5b6c3.webp)
 
@@ -77,7 +77,7 @@ mysql -h$host -P$port -u$user -p$pwd -e &#34;select * from db1.t&#34; &gt; $targ
 
 也就是说，仅当一个线程处于“等待客户端接收结果”的状态，才会显示&#34;Sending to client&#34;；而如果显示成“Sending data”，它的意思只是“正在执行”。
 
-现在你知道了，查询的结果是分段发给客户端的，因此扫描全表，查询返回大量的数据，并不会把内存打爆。在 server 层的处理逻辑都清楚了，在 InnoDB 引擎里面又是怎么处理的呢？ 扫描全表会不会对引擎系统造成影响呢？
+现在你知道了，查询的结果是分段发给客户端的，因此扫描全表，查询返回大量的数据，并不会把内存打爆。在 server 层的处理逻辑都清楚了，在 InnoDB 引擎里面又是怎么处理的呢？扫描全表会不会对引擎系统造成影响呢？
 
 ## 全表扫描对 InnoDB 的影响
 
@@ -87,7 +87,7 @@ InnoDB 内存的一个作用，是保存更新的结果，再配合 redo log，�
 
 而 Buffer Pool 对查询的加速效果，依赖于一个重要的指标，即：内存命中率。可以在 show engine innodb status 结果中，查看一个系统当前的 BP 命中率。一般情况下，一个稳定服务的线上系统，要保证响应时间符合要求的话，内存命中率要在 99% 以上。
 
-执行 show engine innodb status ，可以看到“Buffer pool hit rate”字样，显示的就是当前的命中率。比如下图这个命中率，就是 99.0%。
+执行 show engine innodb status，可以看到“Buffer pool hit rate”字样，显示的就是当前的命中率。比如下图这个命中率，就是 99.0%。
 
 ![show engine innodb status 显示内存命中率](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/c70a95ee99826812c292c46de508982e.webp)
 

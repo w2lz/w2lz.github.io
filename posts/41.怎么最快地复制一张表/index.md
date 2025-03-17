@@ -123,7 +123,7 @@ load data infile &#39;/server_tmp/t.csv&#39; into table db2.t;
 
 1. 主库执行完成后，将 /server_tmp/t.csv 文件的内容直接写到 binlog 文件中。
 
-2. 往 binlog 文件中写入语句 load data local infile ‘/tmp/SQL_LOAD_MB-1-0’ INTO TABLE `db2`.`t`。
+2. 往 binlog 文件中写入语句 load data local infile‘/tmp/SQL_LOAD_MB-1-0’INTO TABLE `db2`.`t`。
 
 3. 把这个 binlog 日志传到备库。
 
@@ -143,7 +143,7 @@ load data infile &#39;/server_tmp/t.csv&#39; into table db2.t;
 
 2. 加上“local”，读取的是客户端的文件，只要 mysql 客户端有访问这个文件的权限即可。这时候，MySQL 客户端会先把本地文件传给服务端，然后执行上述的 load data 流程。
 
-另外需要注意的是，select …into outfile 方法不会生成表结构文件, 所以导数据时还需要单独的命令得到表结构定义。mysqldump 提供了一个–tab 参数，可以同时导出表结构定义文件和 csv 数据文件。这条命令的使用方法如下：
+另外需要注意的是，select …into outfile 方法不会生成表结构文件，所以导数据时还需要单独的命令得到表结构定义。mysqldump 提供了一个–tab 参数，可以同时导出表结构定义文件和 csv 数据文件。这条命令的使用方法如下：
 
 ```sql
 mysqldump -h$host -P$port -u$user ---single-transaction  --set-gtid-purged=OFF db1 t --where=&#34;a&gt;900&#34; --tab=$secure_file_priv
@@ -157,7 +157,7 @@ mysqldump -h$host -P$port -u$user ---single-transaction  --set-gtid-purged=OFF d
 
 因为，一个 InnoDB 表，除了包含这两个物理文件外，还需要在数据字典中注册。直接拷贝这两个文件的话，因为数据字典中没有 db2.t 这个表，系统是不会识别和接受它们的。
 
-不过，在 MySQL 5.6 版本引入了可传输表空间(transportable tablespace) 的方法，可以通过导出 &#43; 导入表空间的方式，实现物理拷贝表的功能。
+不过，在 MySQL 5.6 版本引入了可传输表空间 (transportable tablespace) 的方法，可以通过导出 &#43; 导入表空间的方式，实现物理拷贝表的功能。
 
 假设现在的目标是在 db1 库下，复制一个跟表 t 相同的表 r，具体的执行步骤如下：
 
@@ -207,7 +207,7 @@ mysqldump -h$host -P$port -u$user ---single-transaction  --set-gtid-purged=OFF d
 
 答：这样做的一个原因是，为了确保备库应用 binlog 正常。因为备库可能配置了 secure_file_priv=null，所以如果不用 local 的话，可能会导入失败，造成主备同步延迟。
 
-另一种应用场景是使用 mysqlbinlog 工具解析 binlog 文件，并应用到目标库的情况。你可以使用下面这条命令 ：
+另一种应用场景是使用 mysqlbinlog 工具解析 binlog 文件，并应用到目标库的情况。你可以使用下面这条命令：
 
 ```sql
 mysqlbinlog $binlog_file | mysql -h$host -P$port -u$user -p$pwd

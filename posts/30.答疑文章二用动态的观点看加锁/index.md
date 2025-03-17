@@ -92,7 +92,7 @@ select id from t where c in(5,20,10) order by c desc for update;
 
 现在都知道间隙锁是不互锁的，但是这两条语句都会在索引 c 上的 c=5、10、20 这三行记录上加记录锁。
 
-这里需要注意一下，由于语句里面是 order by c desc， 这三个记录锁的加锁顺序，是先锁 c=20，然后 c=10，最后是 c=5。
+这里需要注意一下，由于语句里面是 order by c desc，这三个记录锁的加锁顺序，是先锁 c=20，然后 c=10，最后是 c=5。
 
 也就是说，这两条语句要加锁相同的资源，但是加锁顺序相反。当这两条语句并发执行的时候，就可能出现死锁。关于死锁的信息，MySQL 只保留了最后一个死锁的现场，但这个现场还是不完备的。
 
@@ -136,7 +136,7 @@ select id from t where c in(5,20,10) order by c desc for update;
 
 3. 第二个事务显示的信息要多一些：
    
-   - “ HOLDS THE LOCK(S)”用来显示这个事务持有哪些锁；
+   - “HOLDS THE LOCK(S)”用来显示这个事务持有哪些锁；
    
    - index c of table `test`.`t` 表示锁是在表 t 的索引 c 上；
    
@@ -194,7 +194,7 @@ select id from t where c in(5,20,10) order by c desc for update;
 
 1. session A 执行完 select 语句后，什么都没做，但它加锁的范围突然“变大”了；
 
-2. 当执行 select * from t where c&gt;=15 and c&lt;=20 order by c desc lock in share mode; 向左扫描到 c=10 的时候，要把 (5, 10]锁起来。
+2. 当执行 select * from t where c&gt;=15 and c&lt;=20 order by c desc lock in share mode; 向左扫描到 c=10 的时候，要把 (5, 10] 锁起来。
 
 也就是说，所谓“间隙”，其实根本就是由“这个间隙右边的那个记录”定义的。
 
@@ -204,9 +204,9 @@ select id from t where c in(5,20,10) order by c desc for update;
 
 ![update 的例子](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/61c1ceea7b59201649c2514c9db864a7.webp)
 
-可以自己分析一下，session A 的加锁范围是索引 c 上的 (5,10]、(10,15]、(15,20]、(20,25]和 (25,supremum]。
+可以自己分析一下，session A 的加锁范围是索引 c 上的 (5,10]、(10,15]、(15,20]、(20,25] 和 (25,supremum]。
 
-&gt; 注意：根据 c&gt;5 查到的第一个记录是 c=10，因此不会加 (0,5]这个 next-key lock。
+&gt; 注意：根据 c&gt;5 查到的第一个记录是 c=10，因此不会加 (0,5] 这个 next-key lock。
 
 之后 session B 的第一个 update 语句，要把 c=5 改成 c=1，可以理解为两步：
 
@@ -216,7 +216,7 @@ select id from t where c in(5,20,10) order by c desc for update;
 
 按照前面说的，索引 c 上 (5,10) 间隙是由这个间隙右边的记录，也就是 c=10 定义的。所以通过这个操作，session A 的加锁范围变成了下图所示的样子：
 
-![session B 修改后， session A 的加锁范围](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/d2f6a0c46dd8d12f6a90dacc466d53e9.webp)
+![session B 修改后，session A 的加锁范围](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/d2f6a0c46dd8d12f6a90dacc466d53e9.webp)
 
 好，接下来 session B 要执行 update t set c = 5 where c = 1 这个语句了，一样地可以拆成两步：
 

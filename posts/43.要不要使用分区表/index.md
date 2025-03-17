@@ -41,7 +41,7 @@ insert into t values(&#39;2017-4-1&#39;,1),(&#39;2018-4-1&#39;,1);
 
 ![分区表间隙锁示例](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/d28d6ab873bd8337d88812d45b9266c7.webp)
 
-始化表 t 的时候，只插入了两行数据， ftime 的值分别是，&#39;2017-4-1&#39; 和&#39;2018-4-1&#39; 。session A 的 select 语句对索引 ftime 上这两个记录之间的间隙加了锁。如果是一个普通表的话，那么 T1 时刻，在表 t 的 ftime 索引上，间隙和加锁状态应该是下图这样的。
+始化表 t 的时候，只插入了两行数据，ftime 的值分别是，&#39;2017-4-1&#39; 和&#39;2018-4-1&#39; 。session A 的 select 语句对索引 ftime 上这两个记录之间的间隙加了锁。如果是一个普通表的话，那么 T1 时刻，在表 t 的 ftime 索引上，间隙和加锁状态应该是下图这样的。
 
 ![普通表的加锁范围](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/273c9ca869f5b52621641d73eb6f72d2.webp)
 
