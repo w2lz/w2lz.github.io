@@ -1,11 +1,11 @@
 # 30 | 答疑文章（二）：用动态的观点看加锁
 
 
-{{&lt; admonition quote &#34;摘要&#34; true &gt;}}
+{{< admonition quote "摘要" true >}}
 本文深入探讨了 InnoDB 的加锁规则，通过具体案例分析，动态解析了加锁过程。文章首先回顾了加锁规则，包括 next-key lock 作为基本单位、访问对象才会加锁等内容。随后，通过查询案例分析了不等号条件中的等值查询和并发执行可能出现的死锁问题。
-{{&lt; /admonition &gt;}}
+{{< /admonition >}}
 
-&lt;!--more--&gt;
+<!--more-->
 
 复习一下加锁规则。这个规则中，包含了两个“原则”、两个“优化”和一个“bug”：
 
@@ -40,7 +40,7 @@ insert into t values(0,0,0),(5,5,5),
 
 ```sql
 begin;
-select * from t where id&gt;9 and id&lt;12 order by id desc for update;
+select * from t where id>9 and id<12 order by id desc for update;
 ```
 
 利用上面的加锁规则，我们知道这个语句的加锁范围是主键索引上的 (0,5]、(5,10] 和 (10, 15)。也就是说，id=15 这一行，并没有被加上行锁。为什么呢？
@@ -51,7 +51,7 @@ select * from t where id&gt;9 and id&lt;12 order by id desc for update;
 
 ![索引 id 示意图](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/ac1aa07860c565b907b32c5f75c4f2bb.webp)
 
-1. 首先这个查询语句的语义是 order by id desc，要拿到满足条件的所有行，优化器必须先找到“第一个 id&lt;12 的值”。
+1. 首先这个查询语句的语义是 order by id desc，要拿到满足条件的所有行，优化器必须先找到“第一个 id<12 的值”。
 
 2. 这个过程是通过索引树的搜索过程得到的，在引擎内部，其实是要找到 id=12 的这个值，只是最终没找到，但找到了 (10,15) 这个间隙。
 
@@ -72,7 +72,7 @@ select id from t where c in(5,20,10) lock in share mode;
 
 ![in 语句的 explain 结果](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/8a089159c82c1458b26e2756583347b3.webp)
 
-可以看到，这条 in 语句使用了索引 c 并且 rows=3，说明这三个值都是通过 B&#43; 树搜索定位的。
+可以看到，这条 in 语句使用了索引 c 并且 rows=3，说明这三个值都是通过 B+ 树搜索定位的。
 
 在查找 c=5 的时候，先锁住了 (0,5]。但是因为 c 不是唯一索引，为了确认还有没有别的记录 c=5，就要向右遍历，找到 c=10 才确认没有了，这个过程满足优化 2，所以加了间隙锁 (5,10)。
 
@@ -194,7 +194,7 @@ select id from t where c in(5,20,10) order by c desc for update;
 
 1. session A 执行完 select 语句后，什么都没做，但它加锁的范围突然“变大”了；
 
-2. 当执行 select * from t where c&gt;=15 and c&lt;=20 order by c desc lock in share mode; 向左扫描到 c=10 的时候，要把 (5, 10] 锁起来。
+2. 当执行 select * from t where c>=15 and c<=20 order by c desc lock in share mode; 向左扫描到 c=10 的时候，要把 (5, 10] 锁起来。
 
 也就是说，所谓“间隙”，其实根本就是由“这个间隙右边的那个记录”定义的。
 
@@ -206,7 +206,7 @@ select id from t where c in(5,20,10) order by c desc for update;
 
 可以自己分析一下，session A 的加锁范围是索引 c 上的 (5,10]、(10,15]、(15,20]、(20,25] 和 (25,supremum]。
 
-&gt; 注意：根据 c&gt;5 查到的第一个记录是 c=10，因此不会加 (0,5] 这个 next-key lock。
+> 注意：根据 c>5 查到的第一个记录是 c=10，因此不会加 (0,5] 这个 next-key lock。
 
 之后 session B 的第一个 update 语句，要把 c=5 改成 c=1，可以理解为两步：
 
@@ -234,7 +234,7 @@ select id from t where c in(5,20,10) order by c desc for update;
 
 ```sql
 begin;
-select * from t where id&gt;1 for update;
+select * from t where id>1 for update;
 ```
 
 这个查询语句加锁的范围就是 next-key lock (-∞, supremum]。验证方法的话，可以使用下面的操作序列。可以在下图中看到显示的结果。

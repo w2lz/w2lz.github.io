@@ -1,11 +1,11 @@
 # 22 | MySQL 有哪些“饮鸩止渴”提高性能的方法？
 
 
-{{&lt; admonition quote &#34;摘要&#34; true &gt;}}
+{{< admonition quote "摘要" true >}}
 本文深入探讨了 MySQL 性能问题的解决方案，针对短连接风暴和查询更新语句导致的性能问题提出了解决方法。对于短连接风暴可能导致的连接数暴涨问题，提出了通过 kill connection 命令断开不工作的线程或者重启数据库并使用--skip-grant-tables 参数跳过权限验证阶段的方法，但强调了这些方法可能存在的风险和损失。针对查询和更新语句导致的性能问题，文章提出了通过创建索引、改写 SQL 语句以及使用 force index 等方法来解决。
-{{&lt; /admonition &gt;}}
+{{< /admonition >}}
 
-&lt;!--more--&gt;
+<!--more-->
 
 在实际运维过程中可能会碰到这样的情景：业务高峰期，生产环境的 MySQL 压力太大，没法正常响应，需要短期内、临时性地提升一些性能。
 
@@ -45,7 +45,7 @@ max_connections 的计算，不是看谁在 running，是只要连着就占用�
 
 这个结果里，trx_mysql_thread_id=4，表示 id=4 的线程还处在事务中。因此，如果是连接数过多，可以优先断开事务外空闲太久的连接；如果这样还不够，再考虑断开事务内空闲太久的连接。
 
-从服务端断开连接使用的是 kill connection &#43; id 的命令，一个客户端处于 sleep 状态时，它的连接被服务端主动断开后，这个客户端并不会马上知道。直到客户端在发起下一个请求的时候，才会收到这样的报错“ERROR 2013 (HY000): Lost connection to MySQL server during query”。
+从服务端断开连接使用的是 kill connection + id 的命令，一个客户端处于 sleep 状态时，它的连接被服务端主动断开后，这个客户端并不会马上知道。直到客户端在发起下一个请求的时候，才会收到这样的报错“ERROR 2013 (HY000): Lost connection to MySQL server during query”。
 
 从数据库端主动断开连接可能是有损的，尤其是有的应用端收到这个错误后，不重新连接，而是直接用这个已经不能用的句柄重试查询。这会导致从应用端看上去，“MySQL 一直没恢复”。
 
@@ -83,10 +83,10 @@ max_connections 的计算，不是看谁在 running，是只要连着就占用�
 
 导致慢查询的第二种可能是，语句没写好。
 
-这时，可以通过改写 SQL 语句来处理。MySQL 5.7 提供了 query_rewrite 功能，可以把输入的一种语句改写成另外一种模式。比如，语句被错误地写成了 select * from t where id &#43; 1 = 10000，可以通过下面的方式，增加一个语句改写规则。
+这时，可以通过改写 SQL 语句来处理。MySQL 5.7 提供了 query_rewrite 功能，可以把输入的一种语句改写成另外一种模式。比如，语句被错误地写成了 select * from t where id + 1 = 10000，可以通过下面的方式，增加一个语句改写规则。
 
 ```sql
-mysql&gt; insert into query_rewrite.rewrite_rules(pattern, replacement, pattern_database) values (&#34;select * from t where id &#43; 1 = ?&#34;, &#34;select * from t where id = ? - 1&#34;, &#34;db1&#34;);
+mysql> insert into query_rewrite.rewrite_rules(pattern, replacement, pattern_database) values ("select * from t where id + 1 = ?", "select * from t where id = ? - 1", "db1");
 
 call query_rewrite.flush_rewrite_rules();
 ```
@@ -115,7 +115,7 @@ call query_rewrite.flush_rewrite_rules();
 
 2. 如果这个新功能使用的是单独的数据库用户，可以用管理员账号把这个用户删掉，然后断开现有连接。这样，这个新功能的连接不成功，由它引发的 QPS 就会变成 0。
 
-3. 如果这个新增的功能跟主体功能是部署在一起的，那么只能通过处理语句来限制。这时，可以使用上面提到的查询重写功能，把压力最大的 SQL 语句直接重写成&#34;select 1&#34;返回。
+3. 如果这个新增的功能跟主体功能是部署在一起的，那么只能通过处理语句来限制。这时，可以使用上面提到的查询重写功能，把压力最大的 SQL 语句直接重写成"select 1"返回。
 
 当然，这个操作的风险很高，需要特别细致。它可能存在两个副作用：
 

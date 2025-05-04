@@ -1,11 +1,11 @@
 # 43 | 要不要使用分区表？
 
 
-{{&lt; admonition quote &#34;摘要&#34; true &gt;}}
+{{< admonition quote "摘要" true >}}
 分区表是数据库中的一种组织形式，通过将数据分散存储在不同的分区中，可以提高查询性能和管理大型数据表。文章首先介绍了分区表的引擎层行为，包括 InnoDB 和 MyISAM 引擎对分区表的处理方式。其次，文章讨论了手动分表和分区表的区别，指出从引擎层看，这两种方式并没有实质的差别。
-{{&lt; /admonition &gt;}}
+{{< /admonition >}}
 
-&lt;!--more--&gt;
+<!--more-->
 
 ## 分区表是什么？
 
@@ -22,7 +22,7 @@ PARTITION BY RANGE (YEAR(ftime))
  PARTITION p_2018 VALUES LESS THAN (2018) ENGINE = InnoDB,
  PARTITION p_2019 VALUES LESS THAN (2019) ENGINE = InnoDB,
 PARTITION p_others VALUES LESS THAN MAXVALUE ENGINE = InnoDB);
-insert into t values(&#39;2017-4-1&#39;,1),(&#39;2018-4-1&#39;,1);
+insert into t values('2017-4-1',1),('2018-4-1',1);
 ```
 
 ![表 t 的磁盘文件](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/06f041129783533de9c75580f9decdf5.webp)
@@ -41,11 +41,11 @@ insert into t values(&#39;2017-4-1&#39;,1),(&#39;2018-4-1&#39;,1);
 
 ![分区表间隙锁示例](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/d28d6ab873bd8337d88812d45b9266c7.webp)
 
-始化表 t 的时候，只插入了两行数据，ftime 的值分别是，&#39;2017-4-1&#39; 和&#39;2018-4-1&#39; 。session A 的 select 语句对索引 ftime 上这两个记录之间的间隙加了锁。如果是一个普通表的话，那么 T1 时刻，在表 t 的 ftime 索引上，间隙和加锁状态应该是下图这样的。
+始化表 t 的时候，只插入了两行数据，ftime 的值分别是，'2017-4-1' 和'2018-4-1' 。session A 的 select 语句对索引 ftime 上这两个记录之间的间隙加了锁。如果是一个普通表的话，那么 T1 时刻，在表 t 的 ftime 索引上，间隙和加锁状态应该是下图这样的。
 
 ![普通表的加锁范围](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/273c9ca869f5b52621641d73eb6f72d2.webp)
 
-也就是说，&#39;2017-4-1&#39; 和&#39;2018-4-1&#39; 这两个记录之间的间隙是会被锁住的。那么，sesion B 的两条插入语句应该都要进入锁等待状态。
+也就是说，'2017-4-1' 和'2018-4-1' 这两个记录之间的间隙是会被锁住的。那么，sesion B 的两条插入语句应该都要进入锁等待状态。
 
 但是，从上面的实验效果可以看出，session B 的第一个 insert 语句是可以执行成功的。这是因为，对于引擎来说，p_2018 和 p_2019 是两个不同的表，也就是说 2017-4-1 的下一个记录并不是 2018-4-1，而是 p_2018 分区的 supremum。所以 T1 时刻，在表 t 的 ftime 索引上，间隙和加锁的状态其实是下图这样的：
 
@@ -109,9 +109,9 @@ MySQL 从 5.7.17 开始，将 MyISAM 分区表标记为即将弃用 (deprecated)
 
 3. 在引擎层，认为这是不同的表，因此 MDL 锁之后的执行过程，会根据分区表规则，只访问必要的分区。
 
-而关于“必要的分区”的判断，就是根据 SQL 语句中的 where 条件，结合分区规则来实现的。比如上面的例子中，where ftime=&#39;2018-4-1&#39;，根据分区规则 year 函数算出来的值是 2018，那么就会落在 p_2019 这个分区。
+而关于“必要的分区”的判断，就是根据 SQL 语句中的 where 条件，结合分区规则来实现的。比如上面的例子中，where ftime='2018-4-1'，根据分区规则 year 函数算出来的值是 2018，那么就会落在 p_2019 这个分区。
 
-但是，如果这个 where 条件改成 where ftime&gt;=&#39;2018-4-1&#39;，虽然查询结果相同，但是这时候根据 where 条件，就要访问 p_2019 和 p_others 这两个分区。
+但是，如果这个 where 条件改成 where ftime>='2018-4-1'，虽然查询结果相同，但是这时候根据 where 条件，就要访问 p_2019 和 p_others 这两个分区。
 
 如果查询语句的 where 条件中没有分区 key，那就只能访问所有分区了。当然，这并不是分区表的问题。即使是使用业务分表的方式，where 条件中没有使用分表的 key，也必须访问所有的分表。
 

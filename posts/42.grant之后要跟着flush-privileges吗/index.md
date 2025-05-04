@@ -1,21 +1,21 @@
 # 42 | Grant 之后要跟着 Flush Privileges 吗？
 
 
-{{&lt; admonition quote &#34;摘要&#34; true &gt;}}
+{{< admonition quote "摘要" true >}}
 MySQL 中 grant 和 flush privileges 命令的作用及影响是本文的重点。grant 命令用于赋予用户权限，包括全局、库级、表和列权限，并对已存在的连接产生不同影响。flush privileges 命令则用于重新加载权限数据，保持内存数据与磁盘数据一致。文章指出，规范使用 grant 和 revoke 语句时不需要随后加上 flush privileges 语句，而 flush privileges 适用于权限数据不一致的情况。
-{{&lt; /admonition &gt;}}
+{{< /admonition >}}
 
-&lt;!--more--&gt;
+<!--more-->
 
 在 MySQL 里面，grant 语句是用来给用户赋权的。在一些操作文档里面提到，grant 之后要马上跟着执行一个 flush privileges 命令，才能使赋权语句生效。那么，grant 之后真的需要执行 flush privileges 吗？如果没有执行这个 flush 命令的话，赋权语句真的不能生效吗？
 
 接下来介绍一下 grant 语句和 flush privileges 语句分别做了什么事情，然后再一起来分析这个问题。为了便于说明，先创建一个用户：
 
 ```sql
-create user &#39;ua&#39;@&#39;%&#39; identified by &#39;pa&#39;;
+create user 'ua'@'%' identified by 'pa';
 ```
 
-这条语句的逻辑是创建一个用户’ua’@’%’，密码是 pa。注意，在 MySQL 里面，用户名 (user)&#43; 地址 (host) 才表示一个用户，因此 ua@ip1 和 ua@ip2 代表的是两个不同的用户。这条命令做了两个动作：
+这条语句的逻辑是创建一个用户’ua’@’%’，密码是 pa。注意，在 MySQL 里面，用户名 (user)+ 地址 (host) 才表示一个用户，因此 ua@ip1 和 ua@ip2 代表的是两个不同的用户。这条命令做了两个动作：
 
 1. 磁盘上，往 mysql.user 表里插入一行，由于没有指定权限，所以这行数据上所有表示权限的字段的值都是 N；
 
@@ -32,12 +32,12 @@ create user &#39;ua&#39;@&#39;%&#39; identified by &#39;pa&#39;;
 全局权限，作用于整个 MySQL 实例，这些权限信息保存在 mysql 库的 user 表里。如果要给用户 ua 赋一个最高权限的话，语句是这么写的：
 
 ```sql
-grant all privileges on *.* to &#39;ua&#39;@&#39;%&#39; with grant option;
+grant all privileges on *.* to 'ua'@'%' with grant option;
 ```
 
 这个 grant 命令做了两个动作：
 
-1. 磁盘上，将 mysql.user 表里，用户’ua’@’%&#39;这一行的所有表示权限的字段的值都修改为‘Y’；
+1. 磁盘上，将 mysql.user 表里，用户’ua’@’%'这一行的所有表示权限的字段的值都修改为‘Y’；
 
 2. 内存里，从数组 acl_users 中找到这个用户对应的对象，将 access 值（权限位）修改为二进制的“全 1”。
 
@@ -50,12 +50,12 @@ grant all privileges on *.* to &#39;ua&#39;@&#39;%&#39; with grant option;
 需要说明的是，一般在生产环境上要合理控制用户权限的范围。上面用到的这个 grant 语句就是一个典型的错误示范。如果一个用户有所有权限，一般就不应该设置为所有 IP 地址都可以访问。如果要回收上面的 grant 语句赋予的权限，可以使用下面这条命令：
 
 ```sql
-revoke all privileges on *.* from &#39;ua&#39;@&#39;%&#39;;
+revoke all privileges on *.* from 'ua'@'%';
 ```
 
 这条 revoke 命令的用法与 grant 类似，做了如下两个动作：
 
-1. 磁盘上，将 mysql.user 表里，用户’ua’@’%&#39;这一行的所有表示权限的字段的值都修改为“N”；
+1. 磁盘上，将 mysql.user 表里，用户’ua’@’%'这一行的所有表示权限的字段的值都修改为“N”；
 
 2. 内存里，从数组 acl_users 中找到这个用户对应的对象，将 access 的值修改为 0。
 
@@ -64,7 +64,7 @@ revoke all privileges on *.* from &#39;ua&#39;@&#39;%&#39;;
 除了全局权限，MySQL 也支持库级别的权限定义。如果要让用户 ua 拥有库 db1 的所有权限，可以执行下面这条命令：
 
 ```sql
-grant all privileges on db1.* to &#39;ua&#39;@&#39;%&#39; with grant option;
+grant all privileges on db1.* to 'ua'@'%' with grant option;
 ```
 
 基于库的权限记录保存在 mysql.db 表中，在内存里则保存在数组 acl_dbs 中。这条 grant 命令做了如下两个动作：
@@ -100,8 +100,8 @@ grant 操作对于已经存在的连接的影响，在全局权限和基于 db �
 ```sql
 create table db1.t1(id int, a int);
 
-grant all privileges on db1.t1 to &#39;ua&#39;@&#39;%&#39; with grant option;
-GRANT SELECT(id), INSERT (id,a) ON mydb.mytbl TO &#39;ua&#39;@&#39;%&#39; with grant option;
+grant all privileges on db1.t1 to 'ua'@'%' with grant option;
+GRANT SELECT(id), INSERT (id,a) ON mydb.mytbl TO 'ua'@'%' with grant option;
 ```
 
 跟 db 权限类似，这两个权限每次 grant 的时候都会修改数据表，也会同步修改内存中的 hash 结构。因此，对这两类权限的操作，也会马上影响到已经存在的连接。
@@ -143,12 +143,12 @@ grant 语句会同时修改数据表和内存，判断权限的时候使用的�
 flush privileges 语句本身会用数据表的数据重建一份内存权限数据，所以在权限数据可能存在不一致的情况下再使用。而这种不一致往往是由于直接用 DML 语句操作系统权限表导致的，所以尽量不要使用这类语句。另外，在使用 grant 语句赋权时，你可能还会看到这样的写法：
 
 ```sql
-grant super on *.* to &#39;ua&#39;@&#39;%&#39; identified by &#39;pa&#39;;
+grant super on *.* to 'ua'@'%' identified by 'pa';
 ```
 
 这条命令加了 identified by‘密码’，语句的逻辑里面除了赋权外，还包含了：
 
-1. 如果用户’ua’@’%&#39;不存在，就创建这个用户，密码是 pa；
+1. 如果用户’ua’@’%'不存在，就创建这个用户，密码是 pa；
 
 2. 如果用户 ua 已经存在，就将密码修改成 pa。
 

@@ -1,11 +1,11 @@
 # 16 | “Order By”是怎么工作的？
 
 
-{{&lt; admonition quote &#34;摘要&#34; true &gt;}}
+{{< admonition quote "摘要" true >}}
 本文深入探讨了在开发应用中常见的根据指定字段排序来显示结果的需求，以及针对这种需求的 SQL 语句“order by”是如何执行的。文章首先介绍了全字段排序的执行流程，包括使用 explain 命令查看语句的执行情况、sort_buffer 的内存排序和临时文件排序等细节。接着讨论了当排序的单行长度较大时，MySQL 采用的另一种算法——rowid 排序，详细解释了其执行流程和优化效果。通过对比两种排序算法的执行过程和优化效果，可以更好地理解“order by”语句的执行原理和影响因素。
-{{&lt; /admonition &gt;}}
+{{< /admonition >}}
 
-&lt;!--more--&gt;
+<!--more-->
 
 在你开发应用的时候，一定会经常碰到需要根据指定的字段排序来显示结果的需求。还是以前面举例用过的市民表为例，假设要查询城市是“杭州”的所有人名字，并且按照姓名排序返回前 1000 个人的姓名、年龄。假设这个表的部分定义是这样的：
 
@@ -24,7 +24,7 @@ CREATE TABLE `t` (
 这时，你的 SQL 语句可以这么写：
 
 ```sql
-select city,name,age from t where city=&#39;杭州&#39; order by name limit 1000;
+select city,name,age from t where city='杭州' order by name limit 1000;
 ```
 
 那么这个语句是怎么执行的呢？以及有什么参数会影响执行的行为？
@@ -39,11 +39,11 @@ Extra 这个字段中的“Using filesort”表示的就是需要排序，MySQL 
 
 ![city 字段的索引示意图](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/5334cca9118be14bde95ec94b02f0a3e.webp)
 
-从图中可以看到，满足 city=&#39;杭州’条件的行，是从 ID_X 到 ID_(X&#43;N) 的这些记录。通常情况下，这个语句执行流程如下所示：
+从图中可以看到，满足 city='杭州’条件的行，是从 ID_X 到 ID_(X+N) 的这些记录。通常情况下，这个语句执行流程如下所示：
 
 1. 初始化 sort_buffer，确定放入 name、city、age 这三个字段；
 
-2. 从索引 city 找到第一个满足 city=&#39;杭州’条件的主键 id，也就是图中的 ID_X；
+2. 从索引 city 找到第一个满足 city='杭州’条件的主键 id，也就是图中的 ID_X；
 
 3. 到主键 id 索引取出整行，取 name、city、age 三个字段的值，存入 sort_buffer 中；
 
@@ -65,19 +65,19 @@ sort_buffer_size，就是 MySQL 为排序开辟的内存（sort_buffer）的大�
 
 ```sql
 /* 打开 optimizer_trace，只对本线程有效 */
-SET optimizer_trace=&#39;enabled=on&#39;; 
+SET optimizer_trace='enabled=on'; 
 
 /* @a 保存 Innodb_rows_read 的初始值 */
-select VARIABLE_VALUE into @a from  performance_schema.session_status where variable_name = &#39;Innodb_rows_read&#39;;
+select VARIABLE_VALUE into @a from  performance_schema.session_status where variable_name = 'Innodb_rows_read';
 
 /* 执行语句 */
-select city, name,age from t where city=&#39;杭州&#39; order by name limit 1000; 
+select city, name,age from t where city='杭州' order by name limit 1000; 
 
 /* 查看 OPTIMIZER_TRACE 输出 */
 SELECT * FROM `information_schema`.`OPTIMIZER_TRACE`\G
 
 /* @b 保存 Innodb_rows_read 的当前值 */
-select VARIABLE_VALUE into @b from performance_schema.session_status where variable_name = &#39;Innodb_rows_read&#39;;
+select VARIABLE_VALUE into @b from performance_schema.session_status where variable_name = 'Innodb_rows_read';
 
 /* 计算 Innodb_rows_read 差值 */
 select @b-@a;
@@ -93,7 +93,7 @@ number_of_tmp_files 表示的是，排序过程中使用的临时文件数。你
 
 接下来，再来解释一下上图中其他两个值的意思。
 
-示例表中有 4000 条满足 city=&#39;杭州’的记录，所以可以看到 examined_rows=4000，表示参与排序的行数是 4000 行。
+示例表中有 4000 条满足 city='杭州’的记录，所以可以看到 examined_rows=4000，表示参与排序的行数是 4000 行。
 
 sort_mode 里面的 packed_additional_fields 的意思是，排序过程对字符串做了“紧凑”处理。即使 name 字段的定义是 varchar(16)，在排序过程中还是要按照实际长度来分配空间的。
 
@@ -119,13 +119,13 @@ city、name、age 这三个字段的定义总长度是 36，把 max_length_for_s
 
 1. 初始化 sort_buffer，确定放入两个字段，即 name 和 id；
 
-2. 从索引 city 找到第一个满足 city=&#39;杭州’条件的主键 id，也就是图中的 ID_X；
+2. 从索引 city 找到第一个满足 city='杭州’条件的主键 id，也就是图中的 ID_X；
 
 3. 到主键 id 索引取出整行，取 name、id 这两个字段，存入 sort_buffer 中；
 
 4. 从索引 city 取下一个记录的主键 id；
 
-5. 重复步骤 3、4 直到不满足 city=&#39;杭州’条件为止，也就是图中的 ID_Y；
+5. 重复步骤 3、4 直到不满足 city='杭州’条件为止，也就是图中的 ID_Y；
 
 6. 对 sort_buffer 中的数据按照字段 name 进行排序；
 
@@ -171,15 +171,15 @@ alter table t add index city_user(city, name);
 
 ![city 和 name 联合索引示意图](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/f980201372b676893647fb17fac4e2bf.webp)
 
-在这个索引里面，依然可以用树搜索的方式定位到第一个满足 city=&#39;杭州’的记录，并且额外确保了，接下来按顺序取“下一条记录”的遍历过程中，只要 city 的值是杭州，name 的值就一定是有序的。这样整个查询过程的流程就变成了：
+在这个索引里面，依然可以用树搜索的方式定位到第一个满足 city='杭州’的记录，并且额外确保了，接下来按顺序取“下一条记录”的遍历过程中，只要 city 的值是杭州，name 的值就一定是有序的。这样整个查询过程的流程就变成了：
 
-1. 从索引 (city,name) 找到第一个满足 city=&#39;杭州’条件的主键 id；
+1. 从索引 (city,name) 找到第一个满足 city='杭州’条件的主键 id；
 
 2. 到主键 id 索引取出整行，取 name、city、age 三个字段的值，作为结果集的一部分直接返回；
 
 3. 从索引 (city,name) 取下一个记录主键 id；
 
-4. 重复步骤 2、3，直到查到第 1000 条记录，或者是不满足 city=&#39;杭州’条件时循环结束。
+4. 重复步骤 2、3，直到查到第 1000 条记录，或者是不满足 city='杭州’条件时循环结束。
 
 ![引入 (city,name) 联合索引后，查询语句的执行计划](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/3f590c3a14f9236f2d8e1e2cb9686692.webp)
 
@@ -197,11 +197,11 @@ alter table t add index city_user_age(city, name, age);
 
 这时，对于 city 字段的值相同的行来说，还是按照 name 字段的值递增排序的，此时的查询语句也就不再需要排序了。这样整个查询语句的执行流程就变成了：
 
-1. 从索引 (city,name,age) 找到第一个满足 city=&#39;杭州’条件的记录，取出其中的 city、name 和 age 这三个字段的值，作为结果集的一部分直接返回；
+1. 从索引 (city,name,age) 找到第一个满足 city='杭州’条件的记录，取出其中的 city、name 和 age 这三个字段的值，作为结果集的一部分直接返回；
 
 2. 从索引 (city,name,age) 取下一个记录，同样取出这三个字段的值，作为结果集的一部分直接返回；
 
-3. 重复执行步骤 2，直到查到第 1000 条记录，或者是不满足 city=&#39;杭州’条件时循环结束。
+3. 重复执行步骤 2，直到查到第 1000 条记录，或者是不满足 city='杭州’条件时循环结束。
 
 ![引入 (city,name,age) 联合索引后，查询语句的执行流程](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/df4b8e445a59c53df1f2e0f115f02cd6.webp)
 
@@ -222,7 +222,7 @@ alter table t add index city_user_age(city, name, age);
 问：假设表里面已经有了 city_name(city, name) 这个联合索引，然后要查杭州和苏州两个城市中所有的市民的姓名，并且按名字排序，显示前 100 条记录。如果 SQL 查询语句是这么写的：
 
 ```sql
-mysql&gt; select * from t where city in (&#39;杭州&#39;,&#34;苏州&#34;) order by name limit 100;
+mysql> select * from t where city in ('杭州',"苏州") order by name limit 100;
 ```
 
 那么，这个语句执行的时候会有排序过程吗，为什么？
@@ -231,7 +231,7 @@ mysql&gt; select * from t where city in (&#39;杭州&#39;,&#34;苏州&#34;) orde
 
 进一步地，如果有分页需求，要显示第 101 页，也就是说语句最后要改成“limit 10000,100”，你的实现方法又会是什么呢？
 
-答：虽然有 (city,name) 联合索引，对于单个 city 内部，name 是递增的。但是由于这条 SQL 语句不是要单独地查一个 city 的值，而是同时查了&#34;杭州&#34;和&#34; 苏州 &#34;两个城市，因此所有满足条件的 name 就不是递增的了。也就是说，这条 SQL 语句需要排序。
+答：虽然有 (city,name) 联合索引，对于单个 city 内部，name 是递增的。但是由于这条 SQL 语句不是要单独地查一个 city 的值，而是同时查了"杭州"和" 苏州 "两个城市，因此所有满足条件的 name 就不是递增的了。也就是说，这条 SQL 语句需要排序。
 
 那怎么避免排序呢？这里，要用到 (city,name) 联合索引的特性，把这一条语句拆成两条语句，执行流程如下：
 
@@ -244,11 +244,11 @@ mysql&gt; select * from t where city in (&#39;杭州&#39;,&#34;苏州&#34;) orde
 如果把这条 SQL 语句里“limit 100”改成“limit 10000,100”的话，处理方式其实也差不多，即：要把上面的两条语句改成写：
 
 ```sql
-select * from t where city=&#34;杭州&#34; order by name limit 10100; 
+select * from t where city="杭州" order by name limit 10100; 
 ```
 
 ```sql
- select * from t where city=&#34;苏州&#34; order by name limit 10100。
+ select * from t where city="苏州" order by name limit 10100。
 ```
 
 这时候数据量较大，可以同时起两个连接一行行读结果，用归并排序算法拿到这两个结果集里，按顺序取第 10001~10100 的 name 值，就是需要的结果了。
@@ -256,11 +256,11 @@ select * from t where city=&#34;杭州&#34; order by name limit 10100;
 当然这个方案有一个明显的损失，就是从数据库返回给客户端的数据量变大了。所以，如果数据的单行比较大的话，可以考虑把这两条 SQL 语句改成下面这种写法：
 
 ```sql
-select id,name from t where city=&#34;杭州&#34; order by name limit 10100; 
+select id,name from t where city="杭州" order by name limit 10100; 
 ```
 
 ```sql
-select id,name from t where city=&#34;苏州&#34; order by name limit 10100。
+select id,name from t where city="苏州" order by name limit 10100。
 ```
 
 然后，再用归并排序的方法取得按 name 顺序第 10001~10100 的 name、id 的值，然后拿着这 100 个 id 到数据库中去查出所有记录。上面这些方法，需要根据性能需求和开发的复杂度做出权衡。

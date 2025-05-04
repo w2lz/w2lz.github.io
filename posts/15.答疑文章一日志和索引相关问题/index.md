@@ -1,11 +1,11 @@
 # 15 | 答疑文章（一）：日志和索引相关问题
 
 
-{{&lt; admonition quote &#34;摘要&#34; true &gt;}}
+{{< admonition quote "摘要" true >}}
 本文是 MySQL 实战专栏的答疑文章。
-{{&lt; /admonition &gt;}}
+{{< /admonition >}}
 
-&lt;!--more--&gt;
+<!--more-->
 
 ## 日志相关问题
 
@@ -71,7 +71,7 @@
 
 ## 追问 5：不引入两个日志，也就没有两阶段提交的必要了。只用 binlog 来支持崩溃恢复，又能支持归档，不就可以了？
 
-只保留 binlog，然后可以把提交流程改成这样：… -&gt; “数据更新到内存” -&gt; “写 binlog” -&gt; “提交事务”，是不是也可以提供崩溃恢复的能力？答案是不可以。
+只保留 binlog，然后可以把提交流程改成这样：… -> “数据更新到内存” -> “写 binlog” -> “提交事务”，是不是也可以提供崩溃恢复的能力？答案是不可以。
 
 如果说历史原因的话，那就是 InnoDB 并不是 MySQL 的原生存储引擎。MySQL 的原生引擎是 MyISAM，设计之初就有没有支持崩溃恢复。
 
@@ -136,21 +136,21 @@ commit;
 
 所以，redo log buffer 就是一块内存，用来先存 redo 日志的。也就是说，在执行第一个 insert 的时候，数据的内存被修改了，redo log buffer 也写入了日志。
 
-但是，真正把日志写到 redo log 文件（文件名是 ib_logfile&#43; 数字），是在执行 commit 语句的时候做的。
+但是，真正把日志写到 redo log 文件（文件名是 ib_logfile+ 数字），是在执行 commit 语句的时候做的。
 
 单独执行一个更新语句的时候，InnoDB 会自己启动一个事务，在语句执行完成的时候提交。过程跟上面是一样的，只不过是“压缩”到了一个语句里面完成。
 
 ## 业务设计问题
 
-&gt; 业务上有这样的需求，A、B 两个用户，如果互相关注，则成为好友。设计上是有两张表，一个是 like 表，一个是 friend 表，like 表有 user_id、liker_id 两个字段，设置为复合唯一索引即 uk_user_id_liker_id。语句执行逻辑是这样的：
-&gt; 
-&gt; 以 A 关注 B 为例：第一步，先查询对方有没有关注自己（B 有没有关注 A）select * from like where user_id = B and liker_id = A;
-&gt; 
-&gt; 如果有，则成为好友 insert into friend;
-&gt; 
-&gt; 没有，则只是单向关注关系 insert into like;
-&gt; 
-&gt; 但是如果 A、B 同时关注对方，会出现不会成为好友的情况。因为上面第 1 步，双方都没关注对方。第 1 步即使使用了排他锁也不行，因为记录不存在，行锁无法生效。请问这种情况，在 MySQL 锁层面有没有办法处理？
+> 业务上有这样的需求，A、B 两个用户，如果互相关注，则成为好友。设计上是有两张表，一个是 like 表，一个是 friend 表，like 表有 user_id、liker_id 两个字段，设置为复合唯一索引即 uk_user_id_liker_id。语句执行逻辑是这样的：
+> 
+> 以 A 关注 B 为例：第一步，先查询对方有没有关注自己（B 有没有关注 A）select * from like where user_id = B and liker_id = A;
+> 
+> 如果有，则成为好友 insert into friend;
+> 
+> 没有，则只是单向关注关系 insert into like;
+> 
+> 但是如果 A、B 同时关注对方，会出现不会成为好友的情况。因为上面第 1 步，双方都没关注对方。第 1 步即使使用了排他锁也不行，因为记录不存在，行锁无法生效。请问这种情况，在 MySQL 锁层面有没有办法处理？
 
 ```sql
 CREATE TABLE `like` (
@@ -182,16 +182,16 @@ CREATE TABLE `friend` (
 
 首先，要给“like”表增加一个字段，比如叫作 relation_ship，并设为整型，取值 1、2、3。
 
-&gt; 值是 1 的时候，表示 user_id 关注 liker_id;
-&gt; 
-&gt; 值是 2 的时候，表示 liker_id 关注 user_id;
-&gt; 
-&gt; 值是 3 的时候，表示互相关注。
+> 值是 1 的时候，表示 user_id 关注 liker_id;
+> 
+> 值是 2 的时候，表示 liker_id 关注 user_id;
+> 
+> 值是 3 的时候，表示互相关注。
 
-然后，当 A 关注 B 的时候，逻辑改成如下所示的样子：应用代码里面，比较 A 和 B 的大小，如果 A&lt;B，就执行下面的逻辑
+然后，当 A 关注 B 的时候，逻辑改成如下所示的样子：应用代码里面，比较 A 和 B 的大小，如果 A<B，就执行下面的逻辑
 
 ```sql
-mysql&gt; begin; /*启动事务*/
+mysql> begin; /*启动事务*/
 insert into `like`(user_id, liker_id, relation_ship) values(A, B, 1) on duplicate key update relation_ship=relation_ship | 1;
 select relation_ship from `like` where user_id=A and liker_id=B;
 /*代码中判断返回的 relation_ship，
@@ -202,10 +202,10 @@ insert ignore into friend(friend_1_id, friend_2_id) values(A,B);
 commit;
 ```
 
-如果 A&gt;B，则执行下面的逻辑
+如果 A>B，则执行下面的逻辑
 
 ```sql
-mysql&gt; begin; /*启动事务*/
+mysql> begin; /*启动事务*/
 insert into `like`(user_id, liker_id, relation_ship) values(B, A, 2) on duplicate key update relation_ship=relation_ship | 2;
 select relation_ship from `like` where user_id=B and liker_id=A;
 /*代码中判断返回的 relation_ship，
@@ -216,7 +216,7 @@ insert ignore into friend(friend_1_id, friend_2_id) values(B,A);
 commit;
 ```
 
-这个设计里，让“like”表里的数据保证 user_id &lt; liker_id，这样不论是 A 关注 B，还是 B 关注 A，在操作“like”表的时候，如果反向的关系已经存在，就会出现行锁冲突。
+这个设计里，让“like”表里的数据保证 user_id < liker_id，这样不论是 A 关注 B，还是 B 关注 A，在操作“like”表的时候，如果反向的关系已经存在，就会出现行锁冲突。
 
 然后，insert … on duplicate 语句，确保了在事务内部，执行了这个 SQL 语句后，就强行占住了这个行锁，之后的 select 判断 relation_ship 这个逻辑时就确保了是在行锁保护下的读操作。
 
@@ -229,7 +229,7 @@ commit;
 问：创建了一个简单的表 t，并插入一行，然后对这一行做修改。
 
 ```sql
-mysql&gt; CREATE TABLE `t` (
+mysql> CREATE TABLE `t` (
 `id` int(11) NOT NULL primary key auto_increment,
 `a` int(11) DEFAULT NULL
 ) ENGINE=InnoDB;
@@ -239,7 +239,7 @@ insert into t values(1,2);
 这时候，表 t 里有唯一的一行数据 (1,2)。假设现在要执行：
 
 ```sql
-mysql&gt; update t set a=2 where id=1;
+mysql> update t set a=2 where id=1;
 ```
 
 你会看到这样的结果：
@@ -252,7 +252,7 @@ mysql&gt; update t set a=2 where id=1;
 
 2. MySQL 调用了 InnoDB 引擎提供的“修改为 (1,2)”这个接口，但是引擎发现值与原来相同，不更新，直接返回；
 
-3. InnoDB 认真执行了“把这个值修改成 (1,2)&#34;这个操作，该加锁的加锁，该更新的更新。
+3. InnoDB 认真执行了“把这个值修改成 (1,2)"这个操作，该加锁的加锁，该更新的更新。
 
 你觉得实际情况会是以上哪种呢？你可否用构造实验的方式，来证明你的结论？进一步地，可以思考一下，MySQL 为什么要选择这种策略呢？
 
@@ -268,7 +268,7 @@ session B 的 update 语句被 blocked 了，加锁这个动作是 InnoDB 才能
 
 session A 的第二个 select 语句是一致性读（快照读)，它是不能看见 session B 的更新的。现在它返回的是 (1,3)，表示它看见了某个新的版本，这个版本只能是 session A 自己的 update 语句做更新的时候生成。
 
-所以答案应该是选项 3，即：InnoDB 认真执行了“把这个值修改成 (1,2)&#34;这个操作，该加锁的加锁，该更新的更新。
+所以答案应该是选项 3，即：InnoDB 认真执行了“把这个值修改成 (1,2)"这个操作，该加锁的加锁，该更新的更新。
 
 MySQL 怎么这么笨，就不会更新前判断一下值是不是相同吗？如果判断一下，不就不用浪费 InnoDB 操作，多去更新一次了？
 

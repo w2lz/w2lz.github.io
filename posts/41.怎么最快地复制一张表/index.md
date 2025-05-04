@@ -1,11 +1,11 @@
 # 41 | 怎么最快地复制一张表？
 
 
-{{&lt; admonition quote &#34;摘要&#34; true &gt;}}
+{{< admonition quote "摘要" true >}}
 本文介绍了在 MySQL 中最快地复制一张表的方法，包括使用 mysqldump 命令导出 INSERT 语句、直接导出.csv 文件以及使用 mysqldump 的--tab 参数导出表结构定义文件和 CSV 数据文件的方法。此外，还介绍了在 MySQL 5.6 版本中引入的可传输表空间的方法，实现物理拷贝表的功能。文章总结了三种方法的优缺点，指出物理拷贝方式速度最快，但有一定的局限性；而逻辑备份方式则更为灵活，支持跨引擎使用。
-{{&lt; /admonition &gt;}}
+{{< /admonition >}}
 
-&lt;!--more--&gt;
+<!--more-->
 
 怎么在两张表中拷贝数据。如果可以控制对源表的扫描行数和加锁范围很小的话，简单地使用 insert … select 语句即可实现。
 
@@ -21,9 +21,9 @@ delimiter ;;
   begin
     declare i int;
     set i=1;
-    while(i&lt;=1000)do
+    while(i<=1000)do
       insert into t values(i,i,i);
-      set i=i&#43;1;
+      set i=i+1;
     end while;
   end;;
 delimiter ;
@@ -33,21 +33,21 @@ create database db2;
 create table db2.t like db1.t
 ```
 
-假设，要把 db1.t 里面 a&gt;900 的数据行导出来，插入到 db2.t 中。
+假设，要把 db1.t 里面 a>900 的数据行导出来，插入到 db2.t 中。
 
 ## mysqldump 方法
 
 一种方法是使用 mysqldump 命令将数据导出成一组 INSERT 语句。可以使用下面的命令：
 
 ```sql
-mysqldump -h$host -P$port -u$user --add-locks=0 --no-create-info --single-transaction  --set-gtid-purged=OFF db1 t --where=&#34;a&gt;900&#34; --result-file=/client_tmp/t.sql
+mysqldump -h$host -P$port -u$user --add-locks=0 --no-create-info --single-transaction  --set-gtid-purged=OFF db1 t --where="a>900" --result-file=/client_tmp/t.sql
 ```
 
 把结果输出到临时文件。这条命令中，主要参数含义如下：
 
 1. –single-transaction 的作用是，在导出数据的时候不需要对表 db1.t 加表锁，而是使用 START TRANSACTION WITH CONSISTENT SNAPSHOT 的方法；
 
-2. –add-locks 设置为 0，表示在输出的文件结果里，不增加&#34; LOCK TABLES t WRITE;&#34; ；
+2. –add-locks 设置为 0，表示在输出的文件结果里，不增加" LOCK TABLES t WRITE;" ；
 
 3. –no-create-info 的意思是，不需要导出表结构；
 
@@ -64,7 +64,7 @@ mysqldump -h$host -P$port -u$user --add-locks=0 --no-create-info --single-transa
 如果希望生成的文件中一条 INSERT 语句只插入一行数据的话，可以在执行 mysqldump 命令时，加上参数–skip-extended-insert。然后，可以通过下面这条命令，将这些 INSERT 语句放到 db2 库里去执行。
 
 ```sql
-mysql -h127.0.0.1 -P13000  -uroot db2 -e &#34;source /client_tmp/t.sql&#34;
+mysql -h127.0.0.1 -P13000  -uroot db2 -e "source /client_tmp/t.sql"
 ```
 
 需要说明的是，source 并不是一条 SQL 语句，而是一个客户端命令。mysql 客户端执行这个命令的流程是这样的：
@@ -73,14 +73,14 @@ mysql -h127.0.0.1 -P13000  -uroot db2 -e &#34;source /client_tmp/t.sql&#34;
 
 2. 将 SQL 语句发送到服务端执行。
 
-也就是说，服务端执行的并不是这个“source t.sql&#34;语句，而是 INSERT 语句。所以，不论是在慢查询日志（slow log），还是在 binlog，记录的都是这些要被真正执行的 INSERT 语句。
+也就是说，服务端执行的并不是这个“source t.sql"语句，而是 INSERT 语句。所以，不论是在慢查询日志（slow log），还是在 binlog，记录的都是这些要被真正执行的 INSERT 语句。
 
 ## 导出 CSV 文件
 
 另一种方法是直接将结果导出成.csv 文件。MySQL 提供了下面的语法，用来将查询结果导出到服务端本地目录：
 
 ```sql
-select * from db1.t where a&gt;900 into outfile &#39;/server_tmp/t.csv&#39;;
+select * from db1.t where a>900 into outfile '/server_tmp/t.csv';
 ```
 
 在使用这条语句时，需要注意如下几点。
@@ -102,7 +102,7 @@ select * from db1.t where a&gt;900 into outfile &#39;/server_tmp/t.csv&#39;;
 得到.csv 导出文件后，就可以用下面的 load data 命令将数据导入到目标表 db2.t 中。
 
 ```sql
-load data infile &#39;/server_tmp/t.csv&#39; into table db2.t;
+load data infile '/server_tmp/t.csv' into table db2.t;
 ```
 
 这条语句的执行流程如下所示。
@@ -146,7 +146,7 @@ load data infile &#39;/server_tmp/t.csv&#39; into table db2.t;
 另外需要注意的是，select …into outfile 方法不会生成表结构文件，所以导数据时还需要单独的命令得到表结构定义。mysqldump 提供了一个–tab 参数，可以同时导出表结构定义文件和 csv 数据文件。这条命令的使用方法如下：
 
 ```sql
-mysqldump -h$host -P$port -u$user ---single-transaction  --set-gtid-purged=OFF db1 t --where=&#34;a&gt;900&#34; --tab=$secure_file_priv
+mysqldump -h$host -P$port -u$user ---single-transaction  --set-gtid-purged=OFF db1 t --where="a>900" --tab=$secure_file_priv
 ```
 
 这条命令会在 $secure_file_priv 定义的目录下，创建一个 t.sql 文件保存建表语句，同时创建一个 t.txt 文件保存 CSV 数据。
@@ -157,7 +157,7 @@ mysqldump -h$host -P$port -u$user ---single-transaction  --set-gtid-purged=OFF d
 
 因为，一个 InnoDB 表，除了包含这两个物理文件外，还需要在数据字典中注册。直接拷贝这两个文件的话，因为数据字典中没有 db2.t 这个表，系统是不会识别和接受它们的。
 
-不过，在 MySQL 5.6 版本引入了可传输表空间 (transportable tablespace) 的方法，可以通过导出 &#43; 导入表空间的方式，实现物理拷贝表的功能。
+不过，在 MySQL 5.6 版本引入了可传输表空间 (transportable tablespace) 的方法，可以通过导出 + 导入表空间的方式，实现物理拷贝表的功能。
 
 假设现在的目标是在 db1 库下，复制一个跟表 t 相同的表 r，具体的执行步骤如下：
 

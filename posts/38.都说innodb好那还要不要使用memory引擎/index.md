@@ -1,11 +1,11 @@
 # 38 | 都说 InnoDB 好，那还要不要使用 Memory 引擎？
 
 
-{{&lt; admonition quote &#34;摘要&#34; true &gt;}}
+{{< admonition quote "摘要" true >}}
 内存引擎和 InnoDB 引擎在数据组织方式上存在显著差异。InnoDB 引擎将数据存储在主键索引上，而内存引擎则将数据和索引分开存放。这导致了内存表的数据是按照写入顺序存放的，而 InnoDB 表的数据总是有序存放的。此外，内存表不支持行锁，只支持表锁，这会影响并发访问的性能。尽管内存引擎速度快且支持 hash 索引，但在生产环境中使用时需要注意锁粒度问题和数据持久化问题。
-{{&lt; /admonition &gt;}}
+{{< /admonition >}}
 
-&lt;!--more--&gt;
+<!--more-->
 
 ## 内存表的数据组织结构
 
@@ -24,7 +24,7 @@ insert into t2 values(1,1),(2,2),(3,3),(4,4),(5,5),(6,6),(7,7),(8,8),(9,9),(0,0)
 
 可以看到，内存表 t1 的返回结果里面 0 在最后一行，而 InnoDB 表 t2 的返回结果里 0 在第一行。出现这个区别的原因，要从这两个引擎的主键索引的组织方式说起。
 
-表 t2 用的是 InnoDB 引擎，它的主键索引 id 的组织方式，InnoDB 表的数据就放在主键索引树上，主键索引是 B&#43; 树。所以表 t2 的数据组织方式如下图所示：
+表 t2 用的是 InnoDB 引擎，它的主键索引 id 的组织方式，InnoDB 表的数据就放在主键索引树上，主键索引是 B+ 树。所以表 t2 的数据组织方式如下图所示：
 
 ![表 t2 的数据组织](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/4e29e4f9db55ace6ab09161c68ad8c8d.webp)
 
@@ -67,7 +67,7 @@ select * from t1;
 就会看到返回结果里，id=10 这一行出现在 id=4 之后，也就是原来 id=5 这行数据的位置。需要指出的是，表 t1 的这个主键索引是哈希索引，因此如果执行范围查询，比如
 
 ```sql
-select * from t1 where id&lt;5;
+select * from t1 where id<5;
 ```
 
 是用不上主键索引的，需要走全表扫描。那如果要让内存表支持范围扫描，应该怎么办呢？
@@ -84,11 +84,11 @@ alter table t1 add index a_btree_index using btree (id);
 
 ![表 t1 的数据组织 -- 增加 B-Tree 索引](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/1788deca56cb83c114d8353c92e3bde3.webp)
 
-新增的这个 B-Tree 索引看着就眼熟了，这跟 InnoDB 的 b&#43; 树索引组织形式类似。作为对比，可以看一下这下面这两个语句的输出：
+新增的这个 B-Tree 索引看着就眼熟了，这跟 InnoDB 的 b+ 树索引组织形式类似。作为对比，可以看一下这下面这两个语句的输出：
 
 ![使用 B-Tree 和 hash 索引查询返回结果对比](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/a85808fcccab24911d257d720550328a.webp)
 
-可以看到，执行 select * from t1 where id&lt;5 的时候，优化器会选择 B-Tree 索引，所以返回结果是 0 到 4。使用 force index 强行使用主键 id 这个索引，id=0 这一行就在结果集的最末尾了。
+可以看到，执行 select * from t1 where id<5 的时候，优化器会选择 B-Tree 索引，所以返回结果是 0 到 4。使用 force index 强行使用主键 id 这个索引，id=0 这一行就在结果集的最末尾了。
 
 其实，一般在我们的印象中，内存表的优势是速度快，其中的一个原因就是 Memory 引擎支持 hash 索引。当然，更重要的原因是，内存表的所有数据都保存在内存，而内存的读写速度总是比磁盘快。但是，接下来要说明，为什么不建议在生产环境上使用内存表。这里的原因主要包括两个方面：
 
@@ -158,7 +158,7 @@ alter table t1 add index a_btree_index using btree (id);
 
 ```sql
 create temporary table temp_t(id int primary key, a int, b int, index(b))engine=innodb;
-insert into temp_t select * from t2 where b&gt;=1 and b&lt;=2000;
+insert into temp_t select * from t2 where b>=1 and b<=2000;
 select * from t1 join temp_t on (t1.b=temp_t.b);
 ```
 
@@ -174,7 +174,7 @@ select * from t1 join temp_t on (t1.b=temp_t.b);
 
 ```sql
 create temporary table temp_t(id int primary key, a int, b int, index (b))engine=memory;
-insert into temp_t select * from t2 where b&gt;=1 and b&lt;=2000;
+insert into temp_t select * from t2 where b>=1 and b<=2000;
 select * from t1 join temp_t on (t1.b=temp_t.b);
 ```
 

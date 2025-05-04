@@ -2,17 +2,17 @@
 
 # 一个 PHP 菜鸟的心路历程
 
-[![Hugo](https://img.shields.io/badge/Hugo-%5E0.134.1-ff4088?style=flat&amp;logo=hugo)](https://gohugo.io/)
+[![Hugo](https://img.shields.io/badge/Hugo-%5E0.134.1-ff4088?style=flat&logo=hugo)](https://gohugo.io/)
 [![Hugo build and deploy](https://github.com/w2lz/hugo-blog/actions/workflows/deploy.yml/badge.svg?branch=main)](https://github.com/w2lz/hugo-blog/actions/workflows/deploy.yml)
 [![GitHub commit activity (main)](https://img.shields.io/github/commit-activity/m/w2lz/hugo-blog/main?style=flat)](https://github.com/w2lz/hugo-blog/commits/main)
 
-&gt; 站名“一个 PHP 菜鸟的心路历程”，主要是为了纪念刚入行的日子。
+> 站名“一个 PHP 菜鸟的心路历程”，主要是为了纪念刚入行的日子。
 
 博客基于 [Hugo](https://github.com/gohugoio/hugo) 和 [FixIt](https://github.com/Lruihao/FixIt) 搭建，建站的初衷不是为了炫耀所知，而是记录无知。
 
 博客内容主要以 Web 后端开发方向为主，分享一些有趣程序、技巧、开发教程、心情和学习记录等。
 
-你可以通过我的[微信公众号](https://blog.yingnan.wang/images/qr-wx-mp.webp &#34;关注「一个 PHP 菜鸟的心路历程」公众号&#34;)、[GitHub](https://github.com/w2lz/hugo-blog &#34;Watch on GitHub&#34;) 或 [RSS](http://blog.yingnan.wang/index.xml) 来订阅本博客。
+你可以通过我的[微信公众号](https://blog.yingnan.wang/images/qr-wx-mp.webp "关注「一个 PHP 菜鸟的心路历程」公众号")、[GitHub](https://github.com/w2lz/hugo-blog "Watch on GitHub") 或 [RSS](http://blog.yingnan.wang/index.xml) 来订阅本博客。
 
 ![blog-preview](https://raw.githubusercontent.com/w2lz/hugo-blog/refs/heads/main/assets/images/apple-devices-preview.webp)
 
@@ -56,14 +56,14 @@
 ### System requirements
 
 - [Go](https://go.dev/dl/)
-- [Hugo](https://gohugo.io/installation/): &gt;= 0.134.1 (extended version)
+- [Hugo](https://gohugo.io/installation/): >= 0.134.1 (extended version)
 
 ### Clone
 
 首先点上 Star 😜，然后下载源码：
 
 ```bash
-git clone --recursive git@github.com:w2lz/hugo-blog.git &amp;&amp; cd hugo-blog
+git clone --recursive git@github.com:w2lz/hugo-blog.git && cd hugo-blog
 ```
 
 下载源码后，可以通过下面的方式启动这个博客。
@@ -88,7 +88,7 @@ hugo server --disableFastRender --navigateToChanged --environment production --b
 
 ## Author
 
-[w2lz](https://github.com/w2lz &#34;在 GitHub 上关注我&#34;)
+[w2lz](https://github.com/w2lz "在 GitHub 上关注我")
 
 
 ---

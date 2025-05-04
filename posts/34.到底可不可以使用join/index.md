@@ -1,11 +1,11 @@
 # 34 | 到底可不可以使用 Join？
 
 
-{{&lt; admonition quote &#34;摘要&#34; true &gt;}}
+{{< admonition quote "摘要" true >}}
 本文深入探讨了在实际生产中使用 join 语句的问题，重点关注了两个问题：DBA 不允许使用 join 的原因以及在大小不同的表做 join 时应该选择哪个表作为驱动表。文章首先介绍了 join 语句的执行过程，以及使用 straight_join 固定连接方式执行查询的方法。随后详细分析了 Index Nested-Loop Join 算法的执行流程，并通过对比单表查询的方式，得出了使用 join 语句性能更优的结论。
-{{&lt; /admonition &gt;}}
+{{< /admonition >}}
 
-&lt;!--more--&gt;
+<!--more-->
 
 在实际生产中，关于 join 语句使用的问题，一般会集中在以下两类：
 
@@ -30,16 +30,16 @@ create procedure idata()
 begin
   declare i int;
   set i=1;
-  while(i&lt;=1000)do
+  while(i<=1000)do
     insert into t2 values(i, i, i);
-    set i=i&#43;1;
+    set i=i+1;
   end while;
 end;;
 delimiter ;
 call idata();
 
 create table t1 like t2;
-insert into t1 (select * from t2 where id&lt;=100)
+insert into t1 (select * from t2 where id<=100)
 ```
 
 可以看到，这两个表都有一个主键索引 id 和一个索引 a，字段 b 上无索引。存储过程 idata() 往表 t2 里插入了 1000 行数据，在表 t1 里插入的是 100 行数据。
@@ -96,9 +96,9 @@ select * from t1 straight_join t2 on (t1.a=t2.a);
 
 再来看看第二个问题：怎么选择驱动表？在这个 join 语句执行过程中，驱动表是走全表扫描，而被驱动表是走树搜索。
 
-假设被驱动表的行数是 M。每次在被驱动表查一行数据，要先搜索索引 a，再搜索主键索引。每次搜索一棵树近似复杂度是以 2 为底的 M 的对数，记为 log2M，所以在被驱动表上查一行的时间复杂度是 2*log2M。假设驱动表的行数是 N，执行过程就要扫描驱动表 N 行，然后对于每一行，到被驱动表上匹配一次。因此整个执行过程，近似复杂度是 N &#43; N\*2*log2M。显然，N 对扫描行数的影响更大，因此应该让小表来做驱动表。
+假设被驱动表的行数是 M。每次在被驱动表查一行数据，要先搜索索引 a，再搜索主键索引。每次搜索一棵树近似复杂度是以 2 为底的 M 的对数，记为 log2M，所以在被驱动表上查一行的时间复杂度是 2*log2M。假设驱动表的行数是 N，执行过程就要扫描驱动表 N 行，然后对于每一行，到被驱动表上匹配一次。因此整个执行过程，近似复杂度是 N + N\*2*log2M。显然，N 对扫描行数的影响更大，因此应该让小表来做驱动表。
 
-&gt; 如果没觉得这个影响有那么“显然”，可以这么理解：N 扩大 1000 倍的话，扫描行数就会扩大 1000 倍；而 M 扩大 1000 倍，扫描行数扩大不到 10 倍。
+> 如果没觉得这个影响有那么“显然”，可以这么理解：N 扩大 1000 倍的话，扫描行数就会扩大 1000 倍；而 M 扩大 1000 倍，扫描行数扩大不到 10 倍。
 
 到这里小结一下，通过上面的分析得到了两个结论：
 
@@ -144,7 +144,7 @@ select * from t1 straight_join t2 on (t1.a=t2.b);
 
 接下来来看一下，在这种情况下，应该选择哪个表做驱动表。假设小表的行数是 N，大表的行数是 M，那么在这个算法里：
 
-1. 两个表都做一次全表扫描，所以总的扫描行数是 M&#43;N；
+1. 两个表都做一次全表扫描，所以总的扫描行数是 M+N；
 
 2. 内存中的判断次数是 M*N。
 
@@ -172,17 +172,17 @@ select * from t1 straight_join t2 on (t1.a=t2.b);
 
 图中的步骤 4 和 5，表示清空 join_buffer 再复用。这个流程才体现出了这个算法名字中“Block”的由来，表示“分块去 join”。
 
-可以看到，这时候由于表 t1 被分成了两次放入 join_buffer 中，导致表 t2 会被扫描两次。虽然分成两次放入 join_buffer，但是判断等值条件的次数还是不变的，依然是 (88&#43;12)*1000=10 万次。
+可以看到，这时候由于表 t1 被分成了两次放入 join_buffer 中，导致表 t2 会被扫描两次。虽然分成两次放入 join_buffer，但是判断等值条件的次数还是不变的，依然是 (88+12)*1000=10 万次。
 
 再来看下，在这种情况下驱动表的选择问题。假设，驱动表的数据行数是 N，需要分 K 段才能完成算法流程，被驱动表的数据行数是 M。注意，这里的 K 不是常数，N 越大 K 就会越大，因此把 K 表示为λ*N，显然λ的取值范围是 (0,1)。所以，在这个算法的执行过程中：
 
-1. 扫描行数是 N&#43;λ\*N*M；
+1. 扫描行数是 N+λ\*N*M；
 
 2. 内存判断 N*M 次。
 
 显然，内存判断次数是不受选择哪个表作为驱动表影响的。而考虑到扫描行数，在 M 和 N 大小确定的情况下，N 小一些，整个算式的结果会更小。所以结论是，应该让小表当驱动表。
 
-当然，你会发现，在 N&#43;λ*N*M 这个式子里，λ才是影响扫描行数的关键因素，这个值越小越好。刚刚说了 N 越大，分段数 K 越大。那么，N 固定的时候，什么参数会影响 K 的大小呢？（也就是λ的大小）答案是 join_buffer_size。join_buffer_size 越大，一次可以放入的行越多，分成的段数也就越少，对被驱动表的全表扫描次数就越少。
+当然，你会发现，在 N+λ*N*M 这个式子里，λ才是影响扫描行数的关键因素，这个值越小越好。刚刚说了 N 越大，分段数 K 越大。那么，N 固定的时候，什么参数会影响 K 的大小呢？（也就是λ的大小）答案是 join_buffer_size。join_buffer_size 越大，一次可以放入的行越多，分成的段数也就越少，对被驱动表的全表扫描次数就越少。
 
 这就是为什么，可能会看到一些建议，如果 join 语句很慢，就把 join_buffer_size 改大。理解了 MySQL 执行 join 的两种算法，现在再来试着回答文章开头的两个问题。第一个问题：能不能使用 join 语句？
 
@@ -204,18 +204,18 @@ select * from t1 straight_join t2 on (t1.a=t2.b);
 
 所以，这个问题的结论就是，总是应该使用小表做驱动表。那么什么叫作“小表”。
 
-前面的例子是没有加条件的。如果在语句的 where 条件加上 t2.id&lt;=50 这个限定条件，再来看下这两条语句：
+前面的例子是没有加条件的。如果在语句的 where 条件加上 t2.id<=50 这个限定条件，再来看下这两条语句：
 
 ```sql
-select * from t1 straight_join t2 on (t1.b=t2.b) where t2.id&lt;=50;
-select * from t2 straight_join t1 on (t1.b=t2.b) where t2.id&lt;=50;
+select * from t1 straight_join t2 on (t1.b=t2.b) where t2.id<=50;
+select * from t2 straight_join t1 on (t1.b=t2.b) where t2.id<=50;
 ```
 
 注意，为了让两条语句的被驱动表都用不上索引，所以 join 字段都使用了没有索引的字段 b。但如果是用第二个语句的话，join_buffer 只需要放入 t2 的前 50 行，显然是更好的。所以这里，“t2 的前 50 行”是那个相对小的表，也就是“小表”。再来看另外一组例子：
 
 ```sql
-select t1.b,t2.* from  t1  straight_join t2 on (t1.b=t2.b) where t2.id&lt;=100;
-select t1.b,t2.* from  t2  straight_join t1 on (t1.b=t2.b) where t2.id&lt;=100;
+select t1.b,t2.* from  t1  straight_join t2 on (t1.b=t2.b) where t2.id<=100;
+select t1.b,t2.* from  t2  straight_join t1 on (t1.b=t2.b) where t2.id<=100;
 ```
 
 这个例子里，表 t1 和 t2 都是只有 100 行参加 join。但是，这两条语句每次查询放入 join_buffer 中的数据是不一样的：

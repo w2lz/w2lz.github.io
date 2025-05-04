@@ -1,11 +1,11 @@
 # 33 | 我查这么多数据，会不会把数据库内存打爆？
 
 
-{{&lt; admonition quote &#34;摘要&#34; true &gt;}}
+{{< admonition quote "摘要" true >}}
 本文深入分析了全表扫描对数据库内存的影响，重点讨论了全表扫描对 server 层和 InnoDB 引擎的影响，并提出了相应的优化建议。文章首先解答了全表扫描对内存的影响，指出 MySQL 内部的内存占用不会超过 net_buffer_length 的大小，并介绍了查询结果的发送流程和状态变化。强调了客户端接收速度对 MySQL 服务端执行时间的影响，并建议对于大查询结果，使用 mysql_store_result 接口将结果保存到本地内存。
-{{&lt; /admonition &gt;}}
+{{< /admonition >}}
 
-&lt;!--more--&gt;
+<!--more-->
 
 如果我的主机内存只有 100G，现在要对一个 200G 的大表做全表扫描，会不会把数据库主机的内存用光了？
 
@@ -18,7 +18,7 @@
 假设现在要对一个 200G 的 InnoDB 表 db1. t，执行一个全表扫描。当然要把扫描结果保存在客户端，会使用类似这样的命令：
 
 ```sql
-mysql -h$host -P$port -u$user -p$pwd -e &#34;select * from db1.t&#34; &gt; $target_file
+mysql -h$host -P$port -u$user -p$pwd -e "select * from db1.t" > $target_file
 ```
 
 你已经知道了，InnoDB 的数据是保存在主键索引上的，所以全表扫描实际上是直接扫描表 t 的主键索引。这条查询语句由于没有其他的判断条件，所以查到的每一行都可以直接放到结果集里面，然后返回给客户端。那么，这个“结果集”存在哪里呢？实际上，服务端并不需要保存一个完整的结果集。取数据和发数据的流程是这样的：
@@ -75,7 +75,7 @@ mysql -h$host -P$port -u$user -p$pwd -e &#34;select * from db1.t&#34; &gt; $targ
 
 可以看到，session B 明显是在等锁，状态显示为 Sending data。
 
-也就是说，仅当一个线程处于“等待客户端接收结果”的状态，才会显示&#34;Sending to client&#34;；而如果显示成“Sending data”，它的意思只是“正在执行”。
+也就是说，仅当一个线程处于“等待客户端接收结果”的状态，才会显示"Sending to client"；而如果显示成“Sending data”，它的意思只是“正在执行”。
 
 现在你知道了，查询的结果是分段发给客户端的，因此扫描全表，查询返回大量的数据，并不会把内存打爆。在 server 层的处理逻辑都清楚了，在 InnoDB 引擎里面又是怎么处理的呢？扫描全表会不会对引擎系统造成影响呢？
 

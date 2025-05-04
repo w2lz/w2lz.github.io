@@ -1,13 +1,13 @@
 # 45 | 自增 Id 用完怎么办？
 
 
-{{&lt; admonition quote &#34;摘要&#34; true &gt;}}
+{{< admonition quote "摘要" true >}}
 MySQL 中的自增 id 存在上限问题，本文从表定义自增值 id、InnoDB 系统自增 row_id 和 Xid 三个方面分析了自增 id 达到上限后可能出现的情况。在表定义自增值 id 方面，当自增 id 达到上限后，可能导致主键冲突错误。在 InnoDB 系统自增 row_id 方面，达到上限后可能导致数据覆盖。而在 Xid 方面，可能会出现同一个 binlog 里面出现相同 Xid 的场景。此外，文章还介绍了 Innodb trx_id Xid 和 InnoDB 的 trx_id 的概念，以及 thread_id 的逻辑。
-{{&lt; /admonition &gt;}}
+{{< /admonition >}}
 
-&lt;!--more--&gt;
+<!--more-->
 
-MySQL 里有很多自增的 id，每个自增 id 都是定义了初始值，然后不停地往上加步长。虽然自然数是没有上限的，但是在计算机里，只要定义了表示这个数的字节长度，那它就有上限。比如，无符号整型 (unsigned int) 是 4 个字节，上限就是 2&lt;sup&gt;32&lt;/sup&gt;-1。
+MySQL 里有很多自增的 id，每个自增 id 都是定义了初始值，然后不停地往上加步长。虽然自然数是没有上限的，但是在计算机里，只要定义了表示这个数的字节长度，那它就有上限。比如，无符号整型 (unsigned int) 是 4 个字节，上限就是 2<sup>32</sup>-1。
 
 既然自增 id 有上限，就有可能被用完。但是，自增 id 用完了会怎么样呢？
 
@@ -27,12 +27,12 @@ show create table t;
 */
 
 insert into t values(null);
-//Duplicate entry &#39;4294967295&#39; for key &#39;PRIMARY&#39;
+//Duplicate entry '4294967295' for key 'PRIMARY'
 ```
 
 可以看到，第一个 insert 语句插入数据成功后，这个表的 AUTO_INCREMENT 没有改变（还是 4294967295），就导致了第二个 insert 语句又拿到相同的自增 id 值，再试图执行插入语句，报主键冲突错误。
 
-2&lt;sup&gt;32&lt;/sup&gt;-1（4294967295）不是一个特别大的数，对于一个频繁插入删除数据的表来说，是可能会被用完的。因此在建表的时候需要考察表是否有可能达到这个上限，如果有可能，就应该创建成 8 个字节的 bigint unsigned。
+2<sup>32</sup>-1（4294967295）不是一个特别大的数，对于一个频繁插入删除数据的表来说，是可能会被用完的。因此在建表的时候需要考察表是否有可能达到这个上限，如果有可能，就应该创建成 8 个字节的 bigint unsigned。
 
 ## InnoDB 系统自增 row_id
 
@@ -40,13 +40,13 @@ insert into t values(null);
 
 实际上，在代码实现时 row_id 是一个长度为 8 字节的无符号长整型 (bigint unsigned)。但是，InnoDB 在设计时，给 row_id 留的只是 6 个字节的长度，这样写到数据表中时只放了最后 6 个字节，所以 row_id 能写到数据表中的值，就有两个特征：
 
-1. row_id 写入表中的值范围，是从 0 到 2&lt;sup&gt;48&lt;/sup&gt;-1；
+1. row_id 写入表中的值范围，是从 0 到 2<sup>48</sup>-1；
 
-2. 当 dict_sys.row_id=2&lt;sup&gt;48&lt;/sup&gt;时，如果再有插入数据的行为要来申请 row_id，拿到以后再取最后 6 个字节的话就是 0。
+2. 当 dict_sys.row_id=2<sup>48</sup>时，如果再有插入数据的行为要来申请 row_id，拿到以后再取最后 6 个字节的话就是 0。
 
-也就是说，写入表的 row_id 是从 0 开始到 2&lt;sup&gt;48&lt;/sup&gt;-1。达到上限后，下一个值就是 0，然后继续循环。
+也就是说，写入表的 row_id 是从 0 开始到 2<sup>48</sup>-1。达到上限后，下一个值就是 0，然后继续循环。
 
-当然，2&lt;sup&gt;48&lt;/sup&gt;-1 这个值本身已经很大了，但是如果一个 MySQL 实例跑得足够久的话，还是可能达到这个上限的。在 InnoDB 逻辑里，申请到 row_id=N 后，就将这行数据写入表中；如果表中已经存在 row_id=N 的行，新写入的行就会覆盖原有的行。
+当然，2<sup>48</sup>-1 这个值本身已经很大了，但是如果一个 MySQL 实例跑得足够久的话，还是可能达到这个上限的。在 InnoDB 逻辑里，申请到 row_id=N 后，就将这行数据写入表中；如果表中已经存在 row_id=N 的行，新写入的行就会覆盖原有的行。
 
 要验证这个结论的话，可以通过 gdb 修改系统的自增 row_id 来实现。注意，用 gdb 改变量这个操作是为了便于复现问题，只能在测试环境使用。
 
@@ -54,7 +54,7 @@ insert into t values(null);
 
 ![row_id 用完的效果验证](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/5ad1fff81bda3a6b00ec84e84753fa5c.webp)
 
-可以看到，在用 gdb 将 dict_sys.row_id 设置为 2&lt;sup&gt;48&lt;/sup&gt;之后，再插入的 a=2 的行会出现在表 t 的第一行，因为这个值的 row_id=0。之后再插入的 a=3 的行，由于 row_id=1，就覆盖了之前 a=1 的行，因为 a=1 这一行的 row_id 也是 1。
+可以看到，在用 gdb 将 dict_sys.row_id 设置为 2<sup>48</sup>之后，再插入的 a=2 的行会出现在表 t 的第一行，因为这个值的 row_id=0。之后再插入的 a=3 的行，由于 row_id=1，就覆盖了之前 a=1 的行，因为 a=1 这一行的 row_id 也是 1。
 
 从这个角度看，还是应该在 InnoDB 表中主动创建自增主键。因为，表自增 id 到达上限后，再插入数据时报主键冲突错误，是更能被接受的。
 
@@ -70,15 +70,15 @@ MySQL 内部维护了一个全局变量 global_query_id，每次执行语句的�
 
 虽然 MySQL 重启不会导致同一个 binlog 里面出现两个相同的 Xid，但是如果 global_query_id 达到上限后，就会继续从 0 开始计数。从理论上讲，还是就会出现同一个 binlog 里面出现相同 Xid 的场景。
 
-因为 global_query_id 定义的长度是 8 个字节，这个自增值的上限是 2&lt;sup&gt;64&lt;/sup&gt;-1。要出现这种情况，必须是下面这样的过程：
+因为 global_query_id 定义的长度是 8 个字节，这个自增值的上限是 2<sup>64</sup>-1。要出现这种情况，必须是下面这样的过程：
 
 1. 执行一个事务，假设 Xid 是 A；
 
-2. 接下来执行 2&lt;sup&gt;64&lt;/sup&gt;次查询语句，让 global_query_id 回到 A；
+2. 接下来执行 2<sup>64</sup>次查询语句，让 global_query_id 回到 A；
 
 3. 再启动一个事务，这个事务的 Xid 也是 A。
 
-不过，2&lt;sup&gt;64&lt;/sup&gt;这个值太大了，大到可以认为这个可能性只会存在于理论上。
+不过，2<sup>64</sup>这个值太大了，大到可以认为这个可能性只会存在于理论上。
 
 ## Innodb trx_id
 
@@ -104,17 +104,17 @@ session B 里，从 innodb_trx 表里查出的这两个字段，第二个字段 
 
 需要注意的是，除了显而易见的修改类语句外，如果在 select 语句后面加上 for update，这个事务也不是只读事务。有的人做实验的时候发现不止加 1。这是因为：
 
-1. update 和 delete 语句除了事务本身，还涉及到标记删除旧数据，也就是要把数据放到 purge 队列里等待后续物理删除，这个操作也会把 max_trx_id&#43;1，因此在一个事务中至少加 2；
+1. update 和 delete 语句除了事务本身，还涉及到标记删除旧数据，也就是要把数据放到 purge 队列里等待后续物理删除，这个操作也会把 max_trx_id+1，因此在一个事务中至少加 2；
 
 2. InnoDB 的后台操作，比如表的索引信息统计这类操作，也是会启动内部事务的，因此可能看到，trx_id 值并不是按照加 1 递增的。
 
-那么，T2 时刻查到的这个很大的数字是怎么来的呢？其实，这个数字是每次查询的时候由系统临时计算出来的。它的算法是：把当前事务的 trx 变量的指针地址转成整数，再加上 2&lt;sup&gt;48&lt;/sup&gt;。使用这个算法，就可以保证以下两点：
+那么，T2 时刻查到的这个很大的数字是怎么来的呢？其实，这个数字是每次查询的时候由系统临时计算出来的。它的算法是：把当前事务的 trx 变量的指针地址转成整数，再加上 2<sup>48</sup>。使用这个算法，就可以保证以下两点：
 
 1. 因为同一个只读事务在执行期间，它的指针地址是不会变的，所以不论是在 innodb_trx 还是在 innodb_locks 表里，同一个只读事务查出来的 trx_id 就会是一样的。
 
 2. 如果有并行的多个只读事务，每个事务的 trx 变量的指针地址肯定不同。这样，不同的并发只读事务，查出来的 trx_id 就是不同的。
 
-那么，为什么还要再加上 2&lt;sup&gt;48&lt;/sup&gt;呢？在显示值里面加上 2&lt;sup&gt;48&lt;/sup&gt;，目的是要保证只读事务显示的 trx_id 值比较大，正常情况下就会区别于读写事务的 id。但是，trx_id 跟 row_id 的逻辑类似，定义长度也是 8 个字节。因此，在理论上还是可能出现一个读写事务与一个只读事务显示的 trx_id 相同的情况。不过这个概率很低，并且也没有什么实质危害，可以不管它。
+那么，为什么还要再加上 2<sup>48</sup>呢？在显示值里面加上 2<sup>48</sup>，目的是要保证只读事务显示的 trx_id 值比较大，正常情况下就会区别于读写事务的 id。但是，trx_id 跟 row_id 的逻辑类似，定义长度也是 8 个字节。因此，在理论上还是可能出现一个读写事务与一个只读事务显示的 trx_id 相同的情况。不过这个概率很低，并且也没有什么实质危害，可以不管它。
 
 另一个问题是，只读事务不分配 trx_id，有什么好处呢？
 
@@ -122,13 +122,13 @@ session B 里，从 innodb_trx 表里查出的这两个字段，第二个字段 
 
 - 另一个好处是，可以减少 trx_id 的申请次数。在 InnoDB 里，即使只是执行一个普通的 select 语句，在执行过程中，也是要对应一个只读事务的。所以只读事务优化后，普通的查询语句不需要申请 trx_id，就大大减少了并发事务申请 trx_id 的锁冲突。
 
-由于只读事务不分配 trx_id，一个自然而然的结果就是 trx_id 的增加速度变慢了。但是，max_trx_id 会持久化存储，重启也不会重置为 0，那么从理论上讲，只要一个 MySQL 服务跑得足够久，就可能出现 max_trx_id 达到 2&lt;sup&gt;48&lt;/sup&gt;-1 的上限，然后从 0 开始的情况。当达到这个状态后，MySQL 就会持续出现一个脏读的 bug，来复现一下这个 bug。首先需要把当前的 max_trx_id 先修改成 2&lt;sup&gt;48&lt;/sup&gt;-1。注意：这个 case 里使用的是可重复读隔离级别。具体的操作流程如下：
+由于只读事务不分配 trx_id，一个自然而然的结果就是 trx_id 的增加速度变慢了。但是，max_trx_id 会持久化存储，重启也不会重置为 0，那么从理论上讲，只要一个 MySQL 服务跑得足够久，就可能出现 max_trx_id 达到 2<sup>48</sup>-1 的上限，然后从 0 开始的情况。当达到这个状态后，MySQL 就会持续出现一个脏读的 bug，来复现一下这个 bug。首先需要把当前的 max_trx_id 先修改成 2<sup>48</sup>-1。注意：这个 case 里使用的是可重复读隔离级别。具体的操作流程如下：
 
 ![复现脏读](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/13735f955a437a848895787bf9c723c0.webp)
 
-由于已经把系统的 max_trx_id 设置成了 2&lt;sup&gt;48&lt;/sup&gt;-1，所以在 session A 启动的事务 TA 的低水位就是 2&lt;sup&gt;48&lt;/sup&gt;-1。
+由于已经把系统的 max_trx_id 设置成了 2<sup>48</sup>-1，所以在 session A 启动的事务 TA 的低水位就是 2<sup>48</sup>-1。
 
-在 T2 时刻，session B 执行第一条 update 语句的事务 id 就是 2&lt;sup&gt;48&lt;/sup&gt;-1，而第二条 update 语句的事务 id 就是 0 了，这条 update 语句执行后生成的数据版本上的 trx_id 就是 0。
+在 T2 时刻，session B 执行第一条 update 语句的事务 id 就是 2<sup>48</sup>-1，而第二条 update 语句的事务 id 就是 0 了，这条 update 语句执行后生成的数据版本上的 trx_id 就是 0。
 
 在 T3 时刻，session A 执行 select 语句的时候，判断可见性发现，c=3 这个数据版本的 trx_id，小于事务 TA 的低水位，因此认为这个数据可见。但，这个是脏读。
 
@@ -142,13 +142,13 @@ session B 里，从 innodb_trx 表里查出的这两个字段，第二个字段 
 
 thread_id 的逻辑很好理解：系统保存了一个全局变量 thread_id_counter，每新建一个连接，就将 thread_id_counter 赋值给这个新连接的线程变量。
 
-thread_id_counter 定义的大小是 4 个字节，因此达到 2&lt;sup&gt;32&lt;/sup&gt;-1 后，它就会重置为 0，然后继续增加。但是，你不会在 show processlist 里看到两个相同的 thread_id。
+thread_id_counter 定义的大小是 4 个字节，因此达到 2<sup>32</sup>-1 后，它就会重置为 0，然后继续增加。但是，你不会在 show processlist 里看到两个相同的 thread_id。
 
 这，是因为 MySQL 设计了一个唯一数组的逻辑，给新线程分配 thread_id 的时候，逻辑代码是这样的：
 
 ```sql
 do {
-  new_id= thread_id_counter&#43;&#43;;
+  new_id= thread_id_counter++;
 } while (!thread_ids.insert_unique(new_id).second);
 ```
 

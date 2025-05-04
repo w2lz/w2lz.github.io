@@ -1,11 +1,11 @@
 # 37 | 什么时候会使用内部临时表？
 
 
-{{&lt; admonition quote &#34;摘要&#34; true &gt;}}
+{{< admonition quote "摘要" true >}}
 本文深入介绍了 MySQL 内部临时表的使用情况，重点讨论了在 union 和 group by 语句中的应用。在 union 语句中，内部临时表用于暂存数据并执行两个子查询的并集。通过示例展示了内部临时表的执行流程。对于 group by 语句，文章详细解释了其执行流程和优化方法，特别强调了通过索引优化 group by 语句的执行效率。
-{{&lt; /admonition &gt;}}
+{{< /admonition >}}
 
-&lt;!--more--&gt;
+<!--more-->
 
 ## union 执行流程
 
@@ -19,9 +19,9 @@ begin
   declare i int;
 
   set i=1;
-  while(i&lt;=1000)do
+  while(i<=1000)do
     insert into t1 values(i, i, i);
-    set i=i&#43;1;
+    set i=i+1;
   end while;
 end;;
 delimiter ;
@@ -122,7 +122,7 @@ select id%10 as m, count(*) as c from t1 group by m order by null;
 
 这样就跳过了最后排序的阶段，直接从临时表中取数据返回。返回的结果如下图所示。
 
-![group &#43; order by null 的结果（内存临时表）](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/036634e53276eaf8535c3442805dfaeb.webp)
+![group + order by null 的结果（内存临时表）](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/036634e53276eaf8535c3442805dfaeb.webp)
 
 由于表 t1 中的 id 值是从 1 开始的，因此返回的结果集中第一行是 id=1；扫描到 id=10 的时候才插入 m=0 这一行，因此结果集里最后一行才是 m=0。
 
@@ -137,7 +137,7 @@ select id%100 as m, count(*) as c from t1 group by m order by null limit 10;
 
 那么，这时候就会把内存临时表转成磁盘临时表，磁盘临时表默认使用的引擎是 InnoDB。这时，返回的结果如下图所示。
 
-![group &#43; order by null 的结果（磁盘临时表）](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/a76381d0f3c947292cc28198901f9e6e.webp)
+![group + order by null 的结果（磁盘临时表）](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/a76381d0f3c947292cc28198901f9e6e.webp)
 
 如果这个表 t1 的数据量很大，很可能这个查询需要的磁盘临时表就会占用大量的磁盘空间。
 
@@ -185,7 +185,7 @@ select z, count(*) as c from t1 group by z;
 
 在 group by 语句中加入 SQL_BIG_RESULT 这个提示（hint），就可以告诉优化器：这个语句涉及的数据量很大，请直接用磁盘临时表。
 
-MySQL 的优化器一看，磁盘临时表是 B&#43; 树存储，存储效率不如数组来得高。所以，既然你告诉我数据量很大，那从磁盘空间考虑，还是直接用数组来存吧。因此，下面这个语句
+MySQL 的优化器一看，磁盘临时表是 B+ 树存储，存储效率不如数组来得高。所以，既然你告诉我数据量很大，那从磁盘空间考虑，还是直接用数组来存吧。因此，下面这个语句
 
 ```sql
 select SQL_BIG_RESULT id%100 as m, count(*) as c from t1 group by m;

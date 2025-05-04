@@ -1,11 +1,11 @@
 # 29 | 如何判断一个数据库是不是出问题了？
 
 
-{{&lt; admonition quote &#34;摘要&#34; true &gt;}}
+{{< admonition quote "摘要" true >}}
 这篇文章介绍了如何判断数据库健康状态以及相应的监控和应对措施。首先讲解了主备切换的流程，包括主动切换和被动切换。重点讨论了如何判断主库是否出现问题，指出了简单的 select 1 并不能完全判断主库的正常运行状态。文章详细介绍了 InnoDB 的并发线程控制参数 innodb_thread_concurrency 的作用，以及如何通过设置一个健康检查表来检测并发线程数过多导致的数据库不可用情况。同时，提到了当 binlog 所在磁盘空间满了以后，更新语句和事务提交的影响，以及如何改进监控语句来应对这种情况。
-{{&lt; /admonition &gt;}}
+{{< /admonition >}}
 
-&lt;!--more--&gt;
+<!--more-->
 
 在一主一备的双 M 架构里，主备切换只需要把客户端流量切到备库；而在一主多从架构里，主备切换除了要把客户端流量切到备库外，还需要把从库接到新主库上。
 
@@ -45,9 +45,9 @@ CREATE TABLE `t` (
 
 MySQL 这样设计是非常有意义的。因为，进入锁等待的线程已经不吃 CPU 了；更重要的是，必须这么设计，才能避免整个系统锁死。为什么呢？假设处于锁等待的线程也占并发线程的计数，可以设想一下这个场景：
 
-1. 线程 1 执行 begin; update t set c=c&#43;1 where id=1, 启动了事务 trx1，然后保持这个状态。这时候，线程处于空闲状态，不算在并发线程里面。
+1. 线程 1 执行 begin; update t set c=c+1 where id=1, 启动了事务 trx1，然后保持这个状态。这时候，线程处于空闲状态，不算在并发线程里面。
 
-2. 线程 2 到线程 129 都执行 update t set c=c&#43;1 where id=1; 由于等行锁，进入等待状态。这样就有 128 个线程处于等待状态；
+2. 线程 2 到线程 129 都执行 update t set c=c+1 where id=1; 由于等行锁，进入等待状态。这样就有 128 个线程处于等待状态；
 
 3. 如果处于锁等待状态的线程计数不减一，InnoDB 就会认为线程数用满了，会阻止其他语句进入引擎执行，这样线程 1 不能提交事务。而另外的 128 个线程又处于锁等待状态，整个系统就堵住了。
 
@@ -68,7 +68,7 @@ MySQL 这样设计是非常有意义的。因为，进入锁等待的线程已�
 为了能够检测 InnoDB 并发线程数过多导致的系统不可用情况，需要找一个访问 InnoDB 的场景。一般的做法是，在系统库（mysql 库）里创建一个表，比如命名为 health_check，里面只放一行数据，然后定期执行：
 
 ```sql
-mysql&gt; select * from mysql.health_check; 
+mysql> select * from mysql.health_check; 
 ```
 
 使用这个方法，可以检测出由于并发线程过多导致的数据库不可用的情况。但是马上还会碰到下一个问题，即：空间满了以后，这种方法又会变得不好使。
@@ -82,7 +82,7 @@ mysql&gt; select * from mysql.health_check;
 既然要更新，就要放个有意义的字段，常见做法是放一个 timestamp 字段，用来表示最后一次执行检测的时间。这条更新语句类似于：
 
 ```sql
-mysql&gt; update mysql.health_check set t_modified=now();
+mysql> update mysql.health_check set t_modified=now();
 ```
 
 节点可用性的检测都应该包含主库和备库。如果用更新来检测主库的话，那么备库也要进行更新检测。
@@ -94,7 +94,7 @@ mysql&gt; update mysql.health_check set t_modified=now();
 为了让主备之间的更新不产生冲突，可以在 mysql.health_check 表上存入多行数据，并用 A、B 的 server_id 做主键。
 
 ```sql
-mysql&gt; CREATE TABLE `health_check` (
+mysql> CREATE TABLE `health_check` (
   `id` int(11) NOT NULL,
   `t_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
@@ -120,7 +120,7 @@ insert into mysql.health_check(id, t_modified) values (@@server_id, now()) on du
 
 针对磁盘利用率这个问题，如果 MySQL 可以告诉我们，内部每一次 IO 请求的时间，那我们判断数据库是否出问题的方法就可靠得多了。
 
-其实，MySQL 5.6 版本以后提供的 performance_schema 库，就在 file_summary_by_event_name 表里统计了每次 IO 请求的时间。file_summary_by_event_name 表里有很多行数据，先来看看 event_name=&#39;wait/io/file/innodb/innodb_log_file’这一行。
+其实，MySQL 5.6 版本以后提供的 performance_schema 库，就在 file_summary_by_event_name 表里统计了每次 IO 请求的时间。file_summary_by_event_name 表里有很多行数据，先来看看 event_name='wait/io/file/innodb/innodb_log_file’这一行。
 
 ![performance_schema.file_summary_by_event_name 的一行](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/752ccfe43b4eab155be17401838c62dd.webp)
 
@@ -134,24 +134,24 @@ insert into mysql.health_check(id, t_modified) values (@@server_id, now()) on du
 
 最后的第四组数据，是对其他类型数据的统计。在 redo log 里，可以认为它们就是对 fsync 的统计。
 
-在 performance_schema 库的 file_summary_by_event_name 表里，binlog 对应的是 event_name = &#34;wait/io/file/sql/binlog&#34;这一行。各个字段的统计逻辑，与 redo log 的各个字段完全相同。
+在 performance_schema 库的 file_summary_by_event_name 表里，binlog 对应的是 event_name = "wait/io/file/sql/binlog"这一行。各个字段的统计逻辑，与 redo log 的各个字段完全相同。
 
 因为每一次操作数据库，performance_schema 都需要额外地统计这些信息，所以打开这个统计功能是有性能损耗的。测试结果是，如果打开所有的 performance_schema 项，性能大概会下降 10% 左右。所以，建议你只打开自己需要的项进行统计。可以通过下面的方法打开或者关闭某个具体项的统计。如果要打开 redo log 的时间监控，可以执行这个语句：
 
 ```sql
-mysql&gt; update setup_instruments set ENABLED=&#39;YES&#39;, Timed=&#39;YES&#39; where name like &#39;%wait/io/file/innodb/innodb_log_file%&#39;;
+mysql> update setup_instruments set ENABLED='YES', Timed='YES' where name like '%wait/io/file/innodb/innodb_log_file%';
 ```
 
 假设，现在已经开启了 redo log 和 binlog 这两个统计信息，那要怎么把这个信息用在实例状态诊断上呢？很简单，可以通过 MAX_TIMER 的值来判断数据库是否出问题了。比如，可以设定阈值，单次 IO 请求时间超过 200 毫秒属于异常，然后使用类似下面这条语句作为检测逻辑。
 
 ```sql
-mysql&gt; select event_name,MAX_TIMER_WAIT  FROM performance_schema.file_summary_by_event_name where event_name in (&#39;wait/io/file/innodb/innodb_log_file&#39;,&#39;wait/io/file/sql/binlog&#39;) and MAX_TIMER_WAIT&gt;200*1000000000;
+mysql> select event_name,MAX_TIMER_WAIT  FROM performance_schema.file_summary_by_event_name where event_name in ('wait/io/file/innodb/innodb_log_file','wait/io/file/sql/binlog') and MAX_TIMER_WAIT>200*1000000000;
 ```
 
 发现异常后，取到需要的信息，再通过下面这条语句：
 
 ```sql
-mysql&gt; truncate table performance_schema.file_summary_by_event_name;
+mysql> truncate table performance_schema.file_summary_by_event_name;
 ```
 
 把之前的统计信息清空。这样如果后面的监控中，再次出现这个异常，就可以加入监控累积值了。

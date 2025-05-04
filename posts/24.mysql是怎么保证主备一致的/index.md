@@ -1,11 +1,11 @@
 # 24 | MySQL 是怎么保证主备一致的？
 
 
-{{&lt; admonition quote &#34;摘要&#34; true &gt;}}
+{{< admonition quote "摘要" true >}}
 本文深入介绍了 MySQL 主备同步的基本原理和技术细节，重点围绕 binlog 内容、备库执行 binlog 与主库保持一致的原理展开。详细解释了主备切换流程、节点间的同步更新流程以及 binlog 的三种格式的特点和应用场景。
-{{&lt; /admonition &gt;}}
+{{< /admonition >}}
 
-&lt;!--more--&gt;
+<!--more-->
 
 ## MySQL 主备的基本原理
 
@@ -52,7 +52,7 @@
 binlog 有三种格式，一种是 statement，一种是 row，第三种格式，叫作 mixed，其实它就是前两种格式的混合。为了便于描述 binlog 的这三种格式间的区别，创建了一个表，并初始化几行数据。
 
 ```sql
-mysql&gt; CREATE TABLE `t` (
+mysql> CREATE TABLE `t` (
   `id` int(11) NOT NULL,
   `a` int(11) DEFAULT NULL,
   `t_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -61,23 +61,23 @@ mysql&gt; CREATE TABLE `t` (
   KEY `t_modified`(`t_modified`)
 ) ENGINE=InnoDB;
 
-insert into t values(1,1,&#39;2018-11-13&#39;);
-insert into t values(2,2,&#39;2018-11-12&#39;);
-insert into t values(3,3,&#39;2018-11-11&#39;);
-insert into t values(4,4,&#39;2018-11-10&#39;);
-insert into t values(5,5,&#39;2018-11-09&#39;);
+insert into t values(1,1,'2018-11-13');
+insert into t values(2,2,'2018-11-12');
+insert into t values(3,3,'2018-11-11');
+insert into t values(4,4,'2018-11-10');
+insert into t values(5,5,'2018-11-09');
 ```
 
 如果要在表中删除一行数据的话，来看看这个 delete 语句的 binlog 是怎么记录的。注意，下面这个语句包含注释，如果用 MySQL 客户端来做这个实验的话，要记得加 -c 参数，否则客户端会自动去掉注释。
 
 ```sql
-mysql&gt; delete from t /*comment*/  where a&gt;=4 and t_modified&lt;=&#39;2018-11-10&#39; limit 1;
+mysql> delete from t /*comment*/  where a>=4 and t_modified<='2018-11-10' limit 1;
 ```
 
 当 binlog_format=statement 时，binlog 里面记录的就是 SQL 语句的原文。可以用
 
 ```sql
-mysql&gt; show binlog events in &#39;master.000001&#39;;
+mysql> show binlog events in 'master.000001';
 ```
 
 命令看 binlog 中的内容。
@@ -86,11 +86,11 @@ mysql&gt; show binlog events in &#39;master.000001&#39;;
 
 现在，来看一下上图的输出结果。
 
-- 第一行 SET @@SESSION.GTID_NEXT=&#39;ANONYMOUS’可以先忽略；
+- 第一行 SET @@SESSION.GTID_NEXT='ANONYMOUS’可以先忽略；
 
 - 第二行是一个 BEGIN，跟第四行的 commit 对应，表示中间是一个事务；
 
-- 第三行就是真实执行的语句了。可以看到，在真实执行的 delete 命令之前，还有一个“use‘test’”命令。这条命令不是主动执行的，而是 MySQL 根据当前要操作的表所在的数据库，自行添加的。这样做可以保证日志传到备库去执行的时候，不论当前的工作线程在哪个库里，都能够正确地更新到 test 库的表 t。use &#39;test’命令之后的 delete 语句，就是输入的 SQL 原文了。可以看到，binlog“忠实”地记录了 SQL 命令，甚至连注释也一并记录了。
+- 第三行就是真实执行的语句了。可以看到，在真实执行的 delete 命令之前，还有一个“use‘test’”命令。这条命令不是主动执行的，而是 MySQL 根据当前要操作的表所在的数据库，自行添加的。这样做可以保证日志传到备库去执行的时候，不论当前的工作线程在哪个库里，都能够正确地更新到 test 库的表 t。use 'test’命令之后的 delete 语句，就是输入的 SQL 原文了。可以看到，binlog“忠实”地记录了 SQL 命令，甚至连注释也一并记录了。
 
 - 最后一行是一个 COMMIT。你可以看到里面写着 xid=61。
 
@@ -104,7 +104,7 @@ mysql&gt; show binlog events in &#39;master.000001&#39;;
 
 1. 如果 delete 语句使用的是索引 a，那么会根据索引 a 找到第一个满足条件的行，也就是说删除的是 a=4 这一行；
 
-2. 但如果使用的是索引 t_modified，那么删除的就是 t_modified=&#39;2018-11-09’也就是 a=5 这一行。
+2. 但如果使用的是索引 t_modified，那么删除的就是 t_modified='2018-11-09’也就是 a=5 这一行。
 
 由于 statement 格式下，记录到 binlog 里的是语句原文，因此可能会出现这样一种情况：在主库执行这条 SQL 语句的时候，用的是索引 a；而在备库执行这条 SQL 语句的时候，却使用了索引 t_modified。因此，MySQL 认为这样写是有风险的。
 
@@ -171,7 +171,7 @@ mysqlbinlog  -vv data/master.000001 --start-position=8900;
 虽然 mixed 格式的 binlog 现在已经用得不多了，但这里还是要再借用一下 mixed 格式来说明一个问题，来看一下这条 SQL 语句：
 
 ```sql
-mysql&gt; insert into t values(10,10, now());
+mysql> insert into t values(10,10, now());
 ```
 
 如果把 binlog 格式设置为 mixed，你觉得 MySQL 会把它记录为 row 格式还是 statement 格式呢？先一起来看一下这条语句执行的效果。

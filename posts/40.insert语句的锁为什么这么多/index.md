@@ -1,11 +1,11 @@
 # 40 | Insert 语句的锁为什么这么多？
 
 
-{{&lt; admonition quote &#34;摘要&#34; true &gt;}}
+{{< admonition quote "摘要" true >}}
 MySQL 的 insert 语句在执行过程中可能会涉及到不同的锁，导致一些特殊情况下的性能问题。文章深入剖析了在可重复读隔离级别下，binlog_format=statement 时执行 insert ... select 语句时，需要对表 t 的所有行和间隙加锁的情况。同时，讨论了 insert 循环写入的情况，以及对目标表的锁范围和执行流程。文章还介绍了执行 insert ... select 语句时的慢查询日志和 explain 结果，以及对 InnoDB 扫描行数的分析。最后，提出了针对这类语句的优化方法，以及使用内存临时表来优化的写法。
-{{&lt; /admonition &gt;}}
+{{< /admonition >}}
 
-&lt;!--more--&gt;
+<!--more-->
 
 MySQL 对自增主键锁做了优化，尽量在申请到自增 id 以后，就释放自增锁。因此，insert 语句是一个很轻量的操作。不过，这个结论对于“普通的 insert 语句”才有效。也就是说，还有些 insert 语句是属于“特殊情况”的，在执行过程中需要给其他资源加锁，或者无法在申请到自增 id 以后就立马释放自增锁。
 
@@ -56,7 +56,7 @@ insert into t2(c,d) select c,d from t;
 当然了，执行 insert … select 的时候，对目标表也不是锁全表，而是只锁住需要访问的资源。如果现在有这么一个需求：要往表 t2 中插入一行数据，这一行的 c 值是表 t 中 c 值的最大值加 1。此时，可以这么写这条 SQL 语句：
 
 ```sql
-insert into t2(c,d)  (select c&#43;1, d from t force index(c) order by c desc limit 1);
+insert into t2(c,d)  (select c+1, d from t force index(c) order by c desc limit 1);
 ```
 
 这个语句的加锁范围，就是表 t 索引 c 上的 (3,4] 和 (4,supremum] 这两个 next-key lock，以及主键索引上 id=4 这一行。
@@ -68,7 +68,7 @@ insert into t2(c,d)  (select c&#43;1, d from t force index(c) order by c desc li
 通过这个慢查询日志，看到 Rows_examined=1，正好验证了执行这条语句的扫描行数为 1。那么，如果要把这样的一行数据插入到表 t 中的话：
 
 ```sql
-insert into t(c,d)  (select c&#43;1, d from t force index(c) order by c desc limit 1);
+insert into t(c,d)  (select c+1, d from t force index(c) order by c desc limit 1);
 ```
 
 语句的执行流程是怎样的？扫描行数又是多少呢？这时候，再看慢查询日志就会发现不对了。
@@ -105,7 +105,7 @@ insert into t(c,d)  (select c&#43;1, d from t force index(c) order by c desc lim
 
 ```sql
 create temporary table temp_t(c int,d int) engine=memory;
-insert into temp_t  (select c&#43;1, d from t force index(c) order by c desc limit 1);
+insert into temp_t  (select c+1, d from t force index(c) order by c desc limit 1);
 insert into t select * from temp_t;
 drop table temp_t;
 ```

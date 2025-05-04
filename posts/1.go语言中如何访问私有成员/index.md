@@ -1,11 +1,11 @@
 # 1.Go 语言中如何访问私有成员？
 
 
-{{&lt; admonition quote &#34;摘要&#34; true &gt;}}
+{{< admonition quote "摘要" true >}}
 本文主要探讨了 Go 语言中如何访问私有成员？
-{{&lt; /admonition &gt;}}
+{{< /admonition >}}
 
-&lt;!--more--&gt;
+<!--more-->
 
 ## 答案
 
@@ -55,19 +55,19 @@ func GetPersonAge(p Person) int {
 package main
 
 import (
-    &#34;fmt&#34;
-    &#34;example&#34; // 假设 example 是定义 Person 的包
+    "fmt"
+    "example" // 假设 example 是定义 Person 的包
 )
 
 func main() {
-    p := example.NewPerson(&#34;John&#34;, 30)
+    p := example.NewPerson("John", 30)
 
     // 不能直接访问 p.age，因为 age 是私有的
     // fmt.Println(p.age) // 编译错误
 
     // 可以通过包内公开的函数访问私有成员
     age := example.GetPersonAge(p)
-    fmt.Println(&#34;Age:&#34;, age) // 输出: Age: 30
+    fmt.Println("Age:", age) // 输出: Age: 30
 }
 ```
 
@@ -79,8 +79,8 @@ func main() {
 package main
 
 import (
-    &#34;fmt&#34;
-    &#34;reflect&#34;
+    "fmt"
+    "reflect"
 )
 
 type Person struct {
@@ -89,15 +89,15 @@ type Person struct {
 }
 
 func main() {
-    p := Person{name: &#34;John&#34;, age: 30}
+    p := Person{name: "John", age: 30}
 
     // 获取指向 p 的指针的反射值，Elem 方法用于获取指针指向的值。
-    v := reflect.ValueOf(&amp;p).Elem()
+    v := reflect.ValueOf(&p).Elem()
 
     // 获取私有字段 name
-    nameField := v.FieldByName(&#34;name&#34;)
+    nameField := v.FieldByName("name")
 
-    fmt.Println(&#34;name (private):&#34;, nameField.String())
+    fmt.Println("name (private):", nameField.String())
 }
 ```
 
@@ -107,9 +107,9 @@ func main() {
 package main
 
 import (
-    &#34;fmt&#34;
-    &#34;reflect&#34;
-    &#34;unsafe&#34;
+    "fmt"
+    "reflect"
+    "unsafe"
 )
 
 type Person struct {
@@ -118,19 +118,19 @@ type Person struct {
 }
 
 func main() {
-    p := Person{name: &#34;John&#34;, age: 30}
+    p := Person{name: "John", age: 30}
 
     // 获取指向 p 的指针的反射值，Elem 方法用于获取指针指向的值。
-    value := reflect.ValueOf(&amp;p).Elem()
+    value := reflect.ValueOf(&p).Elem()
 
     // 通过 FieldByName 方法获取私有字段的值
-    field := value.FieldByName(&#34;name&#34;)
+    field := value.FieldByName("name")
 
     // 使用 unsafe.Pointer 和反射来操作私有字段
     realField := reflect.NewAt(field.Type(), unsafe.Pointer(field.UnsafeAddr())).Elem()
 
     // 输出私有字段的值
-    fmt.Println(&#34;name (private):&#34;, realField.String())
+    fmt.Println("name (private):", realField.String())
 }
 ```
 

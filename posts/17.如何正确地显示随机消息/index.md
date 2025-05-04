@@ -1,18 +1,18 @@
 # 17 | 如何正确地显示随机消息？
 
 
-{{&lt; admonition quote &#34;摘要&#34; true &gt;}}
+{{< admonition quote "摘要" true >}}
 本文深入介绍了在 MySQL 中实现随机消息显示的技术特点和优化方法。以一个英语学习 App 的性能问题为例，详细讲解了随机选择单词的 SQL 语句设计、执行流程和优化方法。文章首先介绍了内存临时表排序方法，并分析了其执行流程和扫描行数。作者还解释了内存临时表排序使用的 rowid 排序方法和 rowid 的概念。
-{{&lt; /admonition &gt;}}
+{{< /admonition >}}
 
-&lt;!--more--&gt;
+<!--more-->
 
 假设现在让你做一个英语学习的 APP，这个英语学习 App 首页有一个随机显示单词的功能，也就是根据每个用户的级别有一个单词表，然后这个用户每次访问首页的时候，都会随机滚动显示三个单词。你会发现随着单词表变大，选单词这个逻辑变得越来越慢，甚至影响到了首页的打开速度。现在，如果让你来设计这个 SQL 语句，你会怎么写呢？
 
 为了便于理解，对这个例子进行了简化：去掉每个级别的用户都有一个对应的单词表这个逻辑，直接就是从一个单词表中随机选出三个单词。这个表的建表语句和初始数据的命令如下：
 
 ```sql
-mysql&gt; CREATE TABLE `words` (
+mysql> CREATE TABLE `words` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `word` varchar(64) DEFAULT NULL,
   PRIMARY KEY (`id`)
@@ -23,9 +23,9 @@ create procedure idata()
 begin
   declare i int;
   set i=0;
-  while i&lt;10000 do
-    insert into words(word) values(concat(char(97&#43;(i div 1000)), char(97&#43;(i % 1000 div 100)), char(97&#43;(i % 100 div 10)), char(97&#43;(i % 10))));
-    set i=i&#43;1;
+  while i<10000 do
+    insert into words(word) values(concat(char(97+(i div 1000)), char(97+(i % 1000 div 100)), char(97+(i % 100 div 10)), char(97+(i % 10))));
+    set i=i+1;
   end while;
 end;;
 delimiter ;
@@ -40,7 +40,7 @@ call idata();
 首先，你会想到用 order by rand() 来实现这个逻辑。
 
 ```sql
-mysql&gt; select word from words order by rand() limit 3;
+mysql> select word from words order by rand() limit 3;
 ```
 
 这个语句的意思很直白，随机排序取前 3 个。虽然这个 SQL 语句写法很简单，但执行流程却有点复杂的。先用 explain 命令来看看这个语句的执行情况。
@@ -102,7 +102,7 @@ set tmp_table_size=1024;
 set sort_buffer_size=32768;
 set max_length_for_sort_data=16;
 /* 打开 optimizer_trace，只对本线程有效 */
-SET optimizer_trace=&#39;enabled=on&#39;; 
+SET optimizer_trace='enabled=on'; 
 
 /* 执行语句 */
 select word from words order by rand() limit 3;
@@ -142,7 +142,7 @@ SELECT * FROM `information_schema`.`OPTIMIZER_TRACE`\G
 这个流程结束后，构造的堆里面，就是这个 10000 行里面 R 值最小的三行。然后，依次把它们的 rowid 取出来，去临时表里面拿到 word 字段，这个过程就跟上一篇文章的 rowid 排序的过程一样了。再看一下上面一篇文章的 SQL 查询语句：
 
 ```sql
-select city,name,age from t where city=&#39;杭州&#39; order by name limit 1000  ;
+select city,name,age from t where city='杭州' order by name limit 1000  ;
 ```
 
 你可能会问，这里也用到了 limit，为什么没用优先队列排序算法呢？原因是，这条 SQL 语句是 limit 1000，如果使用优先队列算法的话，需要维护的堆的大小就是 1000 行的 (name,rowid)，超过了设置的 sort_buffer_size 大小，所以只能使用归并排序算法。
@@ -155,16 +155,16 @@ select city,name,age from t where city=&#39;杭州&#39; order by name limit 1000
 
 1. 取得这个表的主键 id 的最大值 M 和最小值 N;
 
-2. 用随机函数生成一个最大值到最小值之间的数 X = (M-N)*rand() &#43; N;
+2. 用随机函数生成一个最大值到最小值之间的数 X = (M-N)*rand() + N;
 
 3. 取不小于 X 的第一个 ID 的行。
 
 把这个算法，暂时称作随机算法 1。这里直接贴一下执行语句的序列：
 
 ```sql
-mysql&gt; select max(id),min(id) into @M,@N from t ;
-set @X= floor((@M-@N&#43;1)*rand() &#43; @N);
-select * from t where id &gt;= @X limit 1;
+mysql> select max(id),min(id) into @M,@N from t ;
+set @X= floor((@M-@N+1)*rand() + @N);
+select * from t where id >= @X limit 1;
 ```
 
 这个方法效率很高，因为取 max(id) 和 min(id) 都是不需要扫描索引的，而第三步的 select 也可以用索引快速定位，可以认为就只扫描了 3 行。但实际上，这个算法本身并不严格满足题目的随机要求，因为 ID 中间可能有空洞，因此选择不同行的概率不一样，不是真正的随机。
@@ -180,17 +180,17 @@ select * from t where id &gt;= @X limit 1;
 把这个算法，称为随机算法 2。下面这段代码，就是上面流程的执行语句的序列。
 
 ```sql
-mysql&gt; select count(*) into @C from t;
+mysql> select count(*) into @C from t;
 set @Y = floor(@C * rand());
-set @sql = concat(&#34;select * from t limit &#34;, @Y, &#34;,1&#34;);
+set @sql = concat("select * from t limit ", @Y, ",1");
 prepare stmt from @sql;
 execute stmt;
 DEALLOCATE prepare stmt;
 ```
 
-由于 limit 后面的参数不能直接跟变量，所以上面的代码中使用了 prepare&#43;execute 的方法。也可以把拼接 SQL 语句的方法写在应用程序中，会更简单些。这个随机算法 2，解决了算法 1 里面明显的概率不均匀问题。
+由于 limit 后面的参数不能直接跟变量，所以上面的代码中使用了 prepare+execute 的方法。也可以把拼接 SQL 语句的方法写在应用程序中，会更简单些。这个随机算法 2，解决了算法 1 里面明显的概率不均匀问题。
 
-MySQL 处理 limit Y,1 的做法就是按顺序一个一个地读出来，丢掉前 Y 个，然后把下一个记录作为返回结果，因此这一步需要扫描 Y&#43;1 行。再加上，第一步扫描的 C 行，总共需要扫描 C&#43;Y&#43;1 行，执行代价比随机算法 1 的代价要高。当然，随机算法 2 跟直接 order by rand() 比起来，执行代价还是小很多的。
+MySQL 处理 limit Y,1 的做法就是按顺序一个一个地读出来，丢掉前 Y 个，然后把下一个记录作为返回结果，因此这一步需要扫描 Y+1 行。再加上，第一步扫描的 C 行，总共需要扫描 C+Y+1 行，执行代价比随机算法 1 的代价要高。当然，随机算法 2 跟直接 order by rand() 比起来，执行代价还是小很多的。
 
 现在再来看看，如果按照随机算法 2 的思路，要随机取 3 个 word 值呢？可以这么做：
 
@@ -203,7 +203,7 @@ MySQL 处理 limit Y,1 的做法就是按顺序一个一个地读出来，丢掉
 把这个算法，称作随机算法 3。下面这段代码，就是上面流程的执行语句的序列。
 
 ```sql
-mysql&gt; select count(*) into @C from t;
+mysql> select count(*) into @C from t;
 set @Y1 = floor(@C * rand());
 set @Y2 = floor(@C * rand());
 set @Y3 = floor(@C * rand());
@@ -220,15 +220,15 @@ select * from t limit @Y3，1；
 
 ## 问题
 
-问：上面的随机算法 3 的总扫描行数是 C&#43;(Y1&#43;1)&#43;(Y2&#43;1)&#43;(Y3&#43;1)，实际上它还是可以继续优化，来进一步减少扫描行数的。如果你是这个需求的开发人员，你会怎么做，来减少扫描行数呢？说说你的方案，并说明你的方案需要的扫描行数。
+问：上面的随机算法 3 的总扫描行数是 C+(Y1+1)+(Y2+1)+(Y3+1)，实际上它还是可以继续优化，来进一步减少扫描行数的。如果你是这个需求的开发人员，你会怎么做，来减少扫描行数呢？说说你的方案，并说明你的方案需要的扫描行数。
 
 答：这里给出一种方法，取 Y1、Y2 和 Y3 里面最大的一个数，记为 M，最小的一个数记为 N，然后执行下面这条 SQL 语句：
 
 ```sql
-mysql&gt; select * from t limit N, M-N&#43;1;
+mysql> select * from t limit N, M-N+1;
 ```
 
-再加上取整个表总行数的 C 行，这个方案的扫描行数总共只需要 C&#43;M&#43;1 行。
+再加上取整个表总行数的 C 行，这个方案的扫描行数总共只需要 C+M+1 行。
 
 
 ---

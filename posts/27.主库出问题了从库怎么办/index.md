@@ -1,11 +1,11 @@
 # 27 | 主库出问题了，从库怎么办？
 
 
-{{&lt; admonition quote &#34;摘要&#34; true &gt;}}
+{{< admonition quote "摘要" true >}}
 在一主多从架构下，主库出现故障后，从库如何处理是一个关键问题。本文深入探讨了基于位点和 GTID 的主备切换方法，并详细介绍了在切换过程中可能出现的数据同步问题及解决方案。GTID（全局事务 ID）作为解决主备切换困难的利器被详细介绍，其生成方式和启动模式都得到了清晰的阐述。文章还通过具体的例子展示了 GTID 的基本用法，以及基于 GTID 的主备切换的实现逻辑。通过 GTID 模式，主备切换不再需要手动找位点，而是在实例内部自动完成，极大地简化了操作流程。
-{{&lt; /admonition &gt;}}
+{{< /admonition >}}
 
-&lt;!--more--&gt;
+<!--more-->
 
 如下图所示，就是一个基本的一主多从结构。
 
@@ -128,7 +128,7 @@ GTID 模式的启动也很简单，只需要在启动一个 MySQL 实例的时�
    
    - 把这个 GTID 加入本实例的 GTID 集合。
 
-2. 如果 gtid_next 是一个指定的 GTID 的值，比如通过 set gtid_next=&#39;current_gtid’指定为 current_gtid，那么就有两种可能：
+2. 如果 gtid_next 是一个指定的 GTID 的值，比如通过 set gtid_next='current_gtid’指定为 current_gtid，那么就有两种可能：
    
    - 如果 current_gtid 已经存在于实例的 GTID 集合中，接下来执行的这个事务会直接被系统忽略；
    
@@ -159,7 +159,7 @@ insert into t values(1,1);
 并且，这条语句在实例 Y 上的 GTID 是“aaaaaaaa-cccc-dddd-eeee-ffffffffffff:10”。那么，实例 X 作为 Y 的从库，就要同步这个事务过来执行，显然会出现主键冲突，导致实例 X 的同步线程停止。这时，应该怎么处理呢？处理方法就是，你可以执行下面的这个语句序列：
 
 ```sql
-set gtid_next=&#39;aaaaaaaa-cccc-dddd-eeee-ffffffffffff:10&#39;;
+set gtid_next='aaaaaaaa-cccc-dddd-eeee-ffffffffffff:10';
 begin;
 commit;
 set gtid_next=automatic;
@@ -232,7 +232,7 @@ master_auto_position=1
 - 到实例 X 上执行以下语句序列：
 
 ```sql
-set GTID_NEXT=&#34;server_uuid_of_Y:gno&#34;;
+set GTID_NEXT="server_uuid_of_Y:gno";
 begin;
 commit;
 set gtid_next=automatic;

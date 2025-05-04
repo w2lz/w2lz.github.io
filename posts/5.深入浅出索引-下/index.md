@@ -1,23 +1,23 @@
 # 05 | 深入浅出索引（下）
 
 
-{{&lt; admonition quote &#34;摘要&#34; true &gt;}}
+{{< admonition quote "摘要" true >}}
 本文深入探讨了 MySQL 索引相关的概念，包括覆盖索引、最左前缀原则和索引下推。覆盖索引能减少树的搜索次数，提升查询性能；最左前缀原则强调索引的复用能力，建议为高频请求创建联合索引；索引下推优化可减少回表次数，提高查询效率。
-{{&lt; /admonition &gt;}}
+{{< /admonition >}}
 
-&lt;!--more--&gt;
+<!--more-->
 
 在下面这个表 T 中，如果执行 select * from T where k between 3 and 5，需要执行几次树的搜索操作，会扫描多少行？下面是这个表的初始化语句。
 
 ```sql
-mysql&gt; create table T (
+mysql> create table T (
 ID int primary key,
 k int NOT NULL DEFAULT 0, 
-s varchar(16) NOT NULL DEFAULT &#39;&#39;,
+s varchar(16) NOT NULL DEFAULT '',
 index k(k))
 engine=InnoDB;
 
-insert into T values(100,1, &#39;aa&#39;),(200,2,&#39;bb&#39;),(300,3,&#39;cc&#39;),(500,5,&#39;ee&#39;),(600,6,&#39;ff&#39;),(700,7,&#39;gg&#39;);
+insert into T values(100,1, 'aa'),(200,2,'bb'),(300,3,'cc'),(500,5,'ee'),(600,6,'ff'),(700,7,'gg');
 ```
 
 ![InnoDB 的索引组织结构](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/dcda101051f28502bd5c4402b292e38d.webp)
@@ -71,13 +71,13 @@ CREATE TABLE `tuser` (
 
 如果为每一种查询都设计一个索引，索引是不是太多了。如果现在要按照市民的身份证号去查他的家庭地址呢？虽然这个查询需求在业务中出现的概率不高，但总不能让它走全表扫描吧？反过来说，单独为一个不频繁的请求创建一个（身份证号，地址）的索引又感觉有点浪费。应该怎么做呢？
 
-这里先说结论吧。B&#43; 树这种索引结构，可以利用索引的“最左前缀”，来定位记录。为了直观地说明这个概念，用（name，age）这个联合索引来分析。
+这里先说结论吧。B+ 树这种索引结构，可以利用索引的“最左前缀”，来定位记录。为了直观地说明这个概念，用（name，age）这个联合索引来分析。
 
 ![（name，age）索引示意图](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/89f74c631110cfbc83298ef27dcd6370.webp)
 
 可以看到，索引项是按照索引定义里面出现的字段顺序排序的。当你的逻辑需求是查到所有名字是“张三”的人时，可以快速定位到 ID4，然后向后遍历得到所有需要的结果。
 
-如果要查的是所有名字第一个字是“张”的人，SQL 语句的条件是&#34;where name like‘张 %’&#34;。这时，也能够用上这个索引，查找到第一个符合条件的记录是 ID3，然后向后遍历，直到不满足条件为止。
+如果要查的是所有名字第一个字是“张”的人，SQL 语句的条件是"where name like‘张 %’"。这时，也能够用上这个索引，查找到第一个符合条件的记录是 ID3，然后向后遍历，直到不满足条件为止。
 
 可以看到，不只是索引的全部定义，只要满足最左前缀，就可以利用索引来加速检索。这个最左前缀可以是联合索引的最左 N 个字段，也可以是字符串索引的最左 M 个字符。
 
@@ -94,7 +94,7 @@ CREATE TABLE `tuser` (
 最左前缀可以用于在索引中定位记录。那些不符合最左前缀的部分，会怎么样呢？还是以市民表的联合索引（name, age）为例。如果现在有一个需求：检索出表中“名字第一个字是张，而且年龄是 10 岁的所有男孩”。那么，SQL 语句是这么写的：
 
 ```sql
-mysql&gt; select * from tuser where name like &#39;张%&#39; and age=10 and ismale=1;
+mysql> select * from tuser where name like '张%' and age=10 and ismale=1;
 ```
 
 这个语句在搜索索引树的时候，只能用“张”，找到第一个满足条件的记录 ID3。当然，这还不错，总比全表扫描要好。然后呢？当然是判断其他条件是否满足。

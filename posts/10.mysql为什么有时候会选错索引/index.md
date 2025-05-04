@@ -1,11 +1,11 @@
 # 10 | MySQL 为什么有时候会选错索引？
 
 
-{{&lt; admonition quote &#34;摘要&#34; true &gt;}}
+{{< admonition quote "摘要" true >}}
 本文深入探讨了 MySQL 索引选择问题，通过一个案例展示了错误的索引选择可能导致查询性能下降的情况。首先介绍了一个简单的表结构和插入数据的存储过程，然后展示了一条查询语句的执行情况。通过对表进行数据操作后再次执行相同的查询语句，发现 MySQL 选择了错误的索引，导致了性能下降。
-{{&lt; /admonition &gt;}}
+{{< /admonition >}}
 
-&lt;!--more--&gt;
+<!--more-->
 
 在 MySQL 中一张表其实是可以支持多个索引的。但是写 SQL 语句的时候，并没有主动指定使用哪个索引。也就是说，使用哪个索引是由 MySQL 来确定的。你有没有碰到过这种情况，一条本来可以执行得很快的语句，却由于 MySQL 选错了索引，而导致执行速度变得很慢？
 
@@ -30,9 +30,9 @@ create procedure idata()
 begin
   declare i int;
   set i=1;
-  while(i&lt;=100000)do
+  while(i<=100000)do
     insert into t values(i, i, i);
-    set i=i&#43;1;
+    set i=i+1;
   end while;
 end;;
 delimiter ;
@@ -42,7 +42,7 @@ call idata();
 接下来，我们分析一条 SQL 语句：
 
 ```sql
-mysql&gt; select * from t where a between 10000 and 20000;
+mysql> select * from t where a between 10000 and 20000;
 ```
 
 你一定会说，这个语句还用分析吗，很简单呀，a 上有索引，肯定是要使用索引 a 的。下图显示的就是使用 explain 命令看到的这条语句的执行情况。
@@ -128,7 +128,7 @@ rows 这个字段表示的是预计扫描行数。
 这回对了。所以在实践中，如果发现 explain 的结果预估的 rows 值跟实际情况差距比较大，可以采用这个方法来处理。其实，如果只是索引统计不准确，通过 analyze 命令可以解决很多问题，但是优化器可不止是看扫描行数。依然是基于这个表 t，看看另外一个语句：
 
 ```sql
-mysql&gt; select * from t where (a between 1 and 1000)  and (b between 50000 and 100000) order by b limit 1;
+mysql> select * from t where (a between 1 and 1000)  and (b between 50000 and 100000) order by b limit 1;
 ```
 
 从条件上看，这个查询没有符合条件的记录，因此会返回空集合。在开始执行这条语句之前，可以先设想一下，如果你来选择索引，会选择哪一个呢？为了便于分析，先来看一下 a、b 这两个索引的结构图。
@@ -142,7 +142,7 @@ mysql&gt; select * from t where (a between 1 and 1000)  and (b between 50000 and
 所以你一定会想，如果使用索引 a 的话，执行速度明显会快很多。那么，下面就来看看到底是不是这么一回事儿。下图是执行 explain 的结果。
 
 ```sql
-mysql&gt; explain select * from t where (a between 1 and 1000) and (b between 50000 and 100000) order by b limit 1;
+mysql> explain select * from t where (a between 1 and 1000) and (b between 50000 and 100000) order by b limit 1;
 ```
 
 ![使用 explain 方法查看执行计划 2](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/483bcb1ef3bb902844e80d9cbdd73ab8.webp)
@@ -180,7 +180,7 @@ mysql&gt; explain select * from t where (a between 1 and 1000) and (b between 50
 当然，这种修改并不是通用的优化手段，只是刚好在这个语句里面有 limit 1，因此如果有满足条件的记录，order by b limit 1 和 order by b,a limit 1 都会返回 b 是最小的那一行，逻辑上一致，才可以这么做。如果你觉得修改语义这件事儿不太好，这里还有一种改法，下图是执行效果。
 
 ```sql
-mysql&gt; select * from  (select * from t where (a between 1 and 1000)  and (b between 50000 and 100000) order by b limit 100)alias limit 1;
+mysql> select * from  (select * from t where (a between 1 and 1000)  and (b between 50000 and 100000) order by b limit 100)alias limit 1;
 ```
 
 ![改写 SQL 的 explain](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/b1a2ad43c78477d7f93dbc692cbaa0d7.webp)

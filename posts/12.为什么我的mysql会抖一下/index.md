@@ -1,11 +1,11 @@
 # 12 | 为什么我的 MySQL 会“抖”一下？
 
 
-{{&lt; admonition quote &#34;摘要&#34; true &gt;}}
+{{< admonition quote "摘要" true >}}
 本文通过对 InnoDB 的工作机制进行比喻，解释了数据库“抖动”现象的原因。首先介绍了 InnoDB 的 WAL 机制，即写日志和内存数据页的刷新过程，分析了导致数据库刷新过程的几种情况，如 redo log 写满、系统内存不足等。指出这些情况会明显影响数据库性能，尤其是当查询需要淘汰大量脏页或者日志写满时，会导致查询响应时间明显变长甚至更新操作完全堵塞。最后，提到 InnoDB 需要有控制脏页比例的机制来尽量避免性能问题的发生。
-{{&lt; /admonition &gt;}}
+{{< /admonition >}}
 
-&lt;!--more--&gt;
+<!--more-->
 
 平时的工作中，你可能遇到过这样的场景，一条 SQL 语句，正常执行的时候特别快，但是有时也不知道怎么回事，它就会变得特别慢，并且这样的场景很难复现，它不只随机，而且持续时间还很短。看上去，这就像是数据库“抖”了一下。
 
@@ -86,7 +86,7 @@ InnoDB 的策略是尽量使用内存，因此对于一个长时间运行的库�
 ```shell
 F1(M)
 {
-  if M&gt;=innodb_max_dirty_pages_pct then
+  if M>=innodb_max_dirty_pages_pct then
       return 100;
   return 100*M/innodb_max_dirty_pages_pct;
 }
@@ -103,8 +103,8 @@ InnoDB 会在后台刷脏页，而刷脏页的过程是要将内存页写入磁�
 要尽量避免这种情况，就要合理地设置 innodb_io_capacity 的值，并且平时要多关注脏页比例，不要让它经常接近 75%。其中，脏页比例是通过 Innodb_buffer_pool_pages_dirty/Innodb_buffer_pool_pages_total 得到的，具体的命令参考下面的代码：
 
 ```sql
-mysql&gt; select VARIABLE_VALUE into @a from global_status where VARIABLE_NAME = &#39;Innodb_buffer_pool_pages_dirty&#39;;
-select VARIABLE_VALUE into @b from global_status where VARIABLE_NAME = &#39;Innodb_buffer_pool_pages_total&#39;;
+mysql> select VARIABLE_VALUE into @a from global_status where VARIABLE_NAME = 'Innodb_buffer_pool_pages_dirty';
+select VARIABLE_VALUE into @b from global_status where VARIABLE_NAME = 'Innodb_buffer_pool_pages_total';
 select @a/@b;
 ```
 

@@ -1,11 +1,11 @@
 # 19 | 为什么我只查一行的语句，也执行这么慢？
 
 
-{{&lt; admonition quote &#34;摘要&#34; true &gt;}}
+{{< admonition quote "摘要" true >}}
 本文深入探讨了查询性能优化中可能出现的问题及解决方法。通过构造一个包含 10 万行记录的表，展示了即使是查询单行数据，也可能出现执行缓慢的情况。文章详细分析了表被锁住的情况，包括等 MDL 锁、等 flush 或等行锁导致的情况，并提供了相应的处理方法。
-{{&lt; /admonition &gt;}}
+{{< /admonition >}}
 
-&lt;!--more--&gt;
+<!--more-->
 
 一般情况下，如果说查询性能优化，你首先会想到一些复杂的语句，想到查询需要返回大量的数据。但有些情况下，“查一行”，也会执行得特别慢。
 
@@ -14,7 +14,7 @@
 为了便于描述，还是构造一个表，基于这个表来说明今天的问题。这个表有两个字段 id 和 c，并且在里面插入了 10 万行记录。
 
 ```sql
-mysql&gt; CREATE TABLE `t` (
+mysql> CREATE TABLE `t` (
   `id` int(11) NOT NULL,
   `c` int(11) DEFAULT NULL,
   PRIMARY KEY (`id`)
@@ -25,9 +25,9 @@ create procedure idata()
 begin
   declare i int;
   set i=1;
-  while(i&lt;=100000) do
+  while(i<=100000) do
     insert into t values(i,i);
-    set i=i&#43;1;
+    set i=i+1;
   end while;
 end;;
 delimiter ;
@@ -40,7 +40,7 @@ call idata();
 如下图所示，在表 t 执行下面的 SQL 语句：
 
 ```sql
-mysql&gt; select * from t where id=1;
+mysql> select * from t where id=1;
 ```
 
 查询结果长时间不返回。
@@ -76,7 +76,7 @@ session A 通过 lock table 命令持有表 t 的 MDL 写锁，而 session B 的
 接下来说一下另外一种查询被堵住的情况。在表 t 上，执行下面的 SQL 语句：
 
 ```sql
-mysql&gt; select * from information_schema.processlist where id=1;
+mysql> select * from information_schema.processlist where id=1;
 ```
 
 可以看一下下图。查出来这个线程的状态是 Waiting for table flush，可以设想一下这是什么原因。
@@ -108,7 +108,7 @@ flush tables with read lock;
 现在，经过了表级锁的考验，我们的 select 语句终于来到引擎里了。
 
 ```sql
-mysql&gt; select * from t where id=1 lock in share mode; 
+mysql> select * from t where id=1 lock in share mode; 
 ```
 
 由于访问 id=1 这个记录时要加读锁，如果这时候已经有一个事务在这行记录上持有一个写锁，我们的 select 语句就会被堵住。复现步骤和现场如下：
@@ -122,7 +122,7 @@ mysql&gt; select * from t where id=1 lock in share mode;
 这个问题并不难分析，但问题是怎么查出是谁占着这个写锁。如果你用的是 MySQL 5.7 版本，可以通过 sys.innodb_lock_waits 表查到。查询方法是：
 
 ```sql
-mysql&gt; select * from t sys.innodb_lock_waits where locked_table=&#39;`test`.`t`&#39;\G
+mysql> select * from t sys.innodb_lock_waits where locked_table='`test`.`t`'\G
 ```
 
 ![通过 sys.innodb_lock_waits 查行锁](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/d8603aeb4eaad3326699c13c46379118.webp)
@@ -138,7 +138,7 @@ mysql&gt; select * from t sys.innodb_lock_waits where locked_table=&#39;`test`.`
 经过了重重封“锁”，再来看看一些查询慢的例子。先来看一条你一定知道原因的 SQL 语句：
 
 ```sql
-mysql&gt; select * from t where c=50000 limit 1;
+mysql> select * from t where c=50000 limit 1;
 ```
 
 由于字段 c 上没有索引，这个语句只能走 id 主键顺序扫描，因此需要扫描 5 万行。作为确认，可以看一下慢查询日志。注意，这里为了把所有语句记录到 slow log 里，在连接后先执行了 set long_query_time=0，将慢查询日志的时间阈值设置为 0。
@@ -150,7 +150,7 @@ Rows_examined 显示扫描了 50000 行。你可能会说，不是很慢呀，11
 但是接下来，再看一个只扫描一行，但是执行很慢的语句。如下图所示，是这个例子的 slow log。可以看到，执行的语句是
 
 ```sql
-mysql&gt; select * from t where id=1；
+mysql> select * from t where id=1；
 ```
 
 虽然扫描行数是 1，但执行时间却长达 800 毫秒。

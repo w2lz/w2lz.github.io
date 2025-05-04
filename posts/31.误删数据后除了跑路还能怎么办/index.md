@@ -1,11 +1,11 @@
 # 31 | 误删数据后除了跑路，还能怎么办？
 
 
-{{&lt; admonition quote &#34;摘要&#34; true &gt;}}
+{{< admonition quote "摘要" true >}}
 本文总结了处理 MySQL 误删数据的方法。针对误删数据行，建议使用 Flashback 工具修改 binlog 内容来恢复数据；对于误删表或数据库，建议通过恢复备份或临时库进行数据恢复。
-{{&lt; /admonition &gt;}}
+{{< /admonition >}}
 
-&lt;!--more--&gt;
+<!--more-->
 
 为了找到解决误删数据的更高效的方法，先对和 MySQL 相关的误删数据，做下分类：
 
@@ -51,7 +51,7 @@
 
 2. 代码上线前，必须经过 SQL 审计。
 
-设置了 sql_safe_updates=on，如果真的要把一个小表的数据全部删掉，应该怎么办呢？如果确定这个删除操作没问题的话，可以在 delete 语句中加上 where 条件，比如 where id&gt;=0。
+设置了 sql_safe_updates=on，如果真的要把一个小表的数据全部删掉，应该怎么办呢？如果确定这个删除操作没问题的话，可以在 delete 语句中加上 where 条件，比如 where id>=0。
 
 但是，delete 全表是很慢的，需要生成回滚日志、写 redo、写 binlog。所以，从性能角度考虑，应该优先考虑使用 truncate table 或者 drop table 命令。
 

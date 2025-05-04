@@ -1,11 +1,11 @@
 # 44 | 答疑文章（三）：说一说这些好问题
 
 
-{{&lt; admonition quote &#34;摘要&#34; true &gt;}}
+{{< admonition quote "摘要" true >}}
 SQL join 语句执行顺序和性能优化是本文的主题，深入讨论了使用 left join 时左表是否一定是驱动表、join 语句中条件放在 on 部分和 where 部分的区别，以及 left join 语义下被驱动表字段放在 where 条件中的影响。通过实际案例和执行计划的分析，详细解释了这些问题的原理和执行过程。
-{{&lt; /admonition &gt;}}
+{{< /admonition >}}
 
-&lt;!--more--&gt;
+<!--more-->
 
 ## join 的写法
 

@@ -1,11 +1,11 @@
 # 18 | 为什么这些 SQL 语句逻辑相同，性能却差异巨大？
 
 
-{{&lt; admonition quote &#34;摘要&#34; true &gt;}}
+{{< admonition quote "摘要" true >}}
 本文深入探讨了 MySQL 中相似逻辑的 SQL 语句却存在巨大性能差异的原因。通过具体案例分析和图示，解释了对索引字段进行函数操作可能导致性能下降的情况，以及隐式类型转换对性能的影响。
-{{&lt; /admonition &gt;}}
+{{< /admonition >}}
 
-&lt;!--more--&gt;
+<!--more-->
 
 在 MySQL 中，有很多看上去逻辑相同，但性能却差异巨大的 SQL 语句。对这些语句使用不当的话，就会不经意间导致整个数据库的压力变大。
 
@@ -14,7 +14,7 @@
 假设你现在维护了一个交易系统，其中交易记录表 tradelog 包含交易流水号（tradeid）、交易员 id（operator）、交易时间（t_modified）等字段。为了便于描述，先忽略其他字段。这个表的建表语句如下：
 
 ```sql
-mysql&gt; CREATE TABLE `tradelog` (
+mysql> CREATE TABLE `tradelog` (
   `id` int(11) NOT NULL,
   `tradeid` varchar(32) DEFAULT NULL,
   `operator` int(11) DEFAULT NULL,
@@ -28,20 +28,20 @@ mysql&gt; CREATE TABLE `tradelog` (
 假设，现在已经记录了从 2016 年初到 2018 年底的所有数据，运营部门有一个需求是，要统计发生在所有年份中 7 月份的交易记录总数。这个逻辑看上去并不复杂，SQL 语句可能会这么写：
 
 ```sql
-mysql&gt; select count(*) from tradelog where month(t_modified)=7;
+mysql> select count(*) from tradelog where month(t_modified)=7;
 ```
 
 由于 t_modified 字段上有索引，于是就很放心地在生产库中执行了这条语句，但却发现执行了特别久，才返回了结果。
 
-如果你问 DBA 同事为什么会出现这样的情况，他大概会告诉你：如果对字段做了函数计算，就用不上索引了，这是 MySQL 的规定。为什么条件是 where t_modified=&#39;2018-7-1’的时候可以用上索引，而改成 where month(t_modified)=7 的时候就不行了？
+如果你问 DBA 同事为什么会出现这样的情况，他大概会告诉你：如果对字段做了函数计算，就用不上索引了，这是 MySQL 的规定。为什么条件是 where t_modified='2018-7-1’的时候可以用上索引，而改成 where month(t_modified)=7 的时候就不行了？
 
 下面是这个 t_modified 索引的示意图。方框上面的数字就是 month() 函数对应的值。
 
 ![t_modified 索引示意图](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/3e30d9a5e67f711f5af2e2599e800286.webp)
 
-如果 SQL 语句条件用的是 where t_modified=&#39;2018-7-1’的话，引擎就会按照上面绿色箭头的路线，快速定位到 t_modified=&#39;2018-7-1’需要的结果。
+如果 SQL 语句条件用的是 where t_modified='2018-7-1’的话，引擎就会按照上面绿色箭头的路线，快速定位到 t_modified='2018-7-1’需要的结果。
 
-实际上，B&#43; 树提供的这个快速定位能力，来源于同一层兄弟节点的有序性。
+实际上，B+ 树提供的这个快速定位能力，来源于同一层兄弟节点的有序性。
 
 但是，如果计算 month() 函数的话，你会看到传入 7 的时候，在树的第一层就不知道该怎么办了。
 
@@ -55,27 +55,27 @@ mysql&gt; select count(*) from tradelog where month(t_modified)=7;
 
 ![explain 结果](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/27c2f5ff3549b18ba37a28f4919f3655.webp)
 
-key=&#34;t_modified&#34;表示的是，使用了 t_modified 这个索引；在测试表数据中插入了 10 万行数据，rows=100335，说明这条语句扫描了整个索引的所有值；Extra 字段的 Using index，表示的是使用了覆盖索引。
+key="t_modified"表示的是，使用了 t_modified 这个索引；在测试表数据中插入了 10 万行数据，rows=100335，说明这条语句扫描了整个索引的所有值；Extra 字段的 Using index，表示的是使用了覆盖索引。
 
 也就是说，由于在 t_modified 字段加了 month() 函数操作，导致了全索引扫描。为了能够用上索引的快速定位能力，就要把 SQL 语句改成基于字段本身的范围查询。按照下面这个写法，优化器就能按照预期，用上 t_modified 索引的快速定位能力了。
 
 ```sql
-mysql&gt; select count(*) from tradelog where
-    -&gt; (t_modified &gt;= &#39;2016-7-1&#39; and t_modified&lt;&#39;2016-8-1&#39;) or
-    -&gt; (t_modified &gt;= &#39;2017-7-1&#39; and t_modified&lt;&#39;2017-8-1&#39;) or 
-    -&gt; (t_modified &gt;= &#39;2018-7-1&#39; and t_modified&lt;&#39;2018-8-1&#39;);
+mysql> select count(*) from tradelog where
+    -> (t_modified >= '2016-7-1' and t_modified<'2016-8-1') or
+    -> (t_modified >= '2017-7-1' and t_modified<'2017-8-1') or 
+    -> (t_modified >= '2018-7-1' and t_modified<'2018-8-1');
 ```
 
 当然，如果你的系统上线时间更早，或者后面又插入了之后年份的数据的话，你就需要再把其他年份补齐。到这里我给你说明了，由于加了 month() 函数操作，MySQL 无法再使用索引快速定位功能，而只能使用全索引扫描。
 
-不过优化器在个问题上确实有“偷懒”行为，即使是对于不改变有序性的函数，也不会考虑使用索引。比如，对于 select * from tradelog where id &#43; 1 = 10000 这个 SQL 语句，这个加 1 操作并不会改变有序性，但是 MySQL 优化器还是不能用 id 索引快速定位到 9999 这一行。所以，需要你在写 SQL 语句的时候，手动改写成 where id = 10000 -1 才可以。
+不过优化器在个问题上确实有“偷懒”行为，即使是对于不改变有序性的函数，也不会考虑使用索引。比如，对于 select * from tradelog where id + 1 = 10000 这个 SQL 语句，这个加 1 操作并不会改变有序性，但是 MySQL 优化器还是不能用 id 索引快速定位到 9999 这一行。所以，需要你在写 SQL 语句的时候，手动改写成 where id = 10000 -1 才可以。
 
 ## 案例二：隐式类型转换
 
 再一起看一下下面的这条 SQL 语句：
 
 ```sql
-mysql&gt; select * from tradelog where tradeid=110717;
+mysql> select * from tradelog where tradeid=110717;
 ```
 
 交易编号 tradeid 这个字段上，本来就有索引，但是 explain 的结果却显示，这条语句需要走全表扫描。你可能也发现了，tradeid 的字段类型是 varchar(32)，而输入的参数却是整型，所以需要做类型转换。那么，现在这里就有两个问题：
@@ -84,7 +84,7 @@ mysql&gt; select * from tradelog where tradeid=110717;
 
 2. 为什么有数据类型转换，就需要走全索引扫描？
 
-数据库里面类型这么多，这种数据类型转换规则更多，记不住，应该怎么办呢？这里有一个简单的方法，看 select“10” &gt; 9 的结果：
+数据库里面类型这么多，这种数据类型转换规则更多，记不住，应该怎么办呢？这里有一个简单的方法，看 select“10” > 9 的结果：
 
 1. 如果规则是“将字符串转成数字”，那么就是做数字比较，结果应该是 1；
 
@@ -94,22 +94,22 @@ mysql&gt; select * from tradelog where tradeid=110717;
 
 ![MySQL 中字符串和数字转换的效果示意图](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/2b67fc38f1651e2622fe21d49950b214.webp)
 
-从图中可知，select“10” &gt; 9 返回的是 1，所以就能确认 MySQL 里的转换规则了：在 MySQL 中，字符串和数字做比较的话，是将字符串转换成数字。这时，再看这个全表扫描的语句：
+从图中可知，select“10” > 9 返回的是 1，所以就能确认 MySQL 里的转换规则了：在 MySQL 中，字符串和数字做比较的话，是将字符串转换成数字。这时，再看这个全表扫描的语句：
 
 ```sql
-mysql&gt; select * from tradelog where tradeid=110717;
+mysql> select * from tradelog where tradeid=110717;
 ```
 
 就知道对于优化器来说，这个语句相当于：
 
 ```sql
-mysql&gt; select * from tradelog where  CAST(tradid AS signed int) = 110717;
+mysql> select * from tradelog where  CAST(tradid AS signed int) = 110717;
 ```
 
 那么如果 id 的类型是 int，执行下面这个语句，是否会导致全表扫描呢？
 
 ```sql
-select * from tradelog where id=&#34;83126&#34;;
+select * from tradelog where id="83126";
 ```
 
 上面的 SQL 会使用到 id 这个索引的，因为字符串和数字在进行比较的时候，是将字符串转换为数字。
@@ -119,7 +119,7 @@ select * from tradelog where id=&#34;83126&#34;;
 假设系统里还有另外一个表 trade_detail，用于记录交易的操作细节。为了便于量化分析和复现，往交易日志表 tradelog 和交易详情表 trade_detail 这两个表里插入一些数据。
 
 ```sql
-mysql&gt; CREATE TABLE `trade_detail` (
+mysql> CREATE TABLE `trade_detail` (
   `id` int(11) NOT NULL,
   `tradeid` varchar(32) DEFAULT NULL,
   `trade_step` int(11) DEFAULT NULL, /*操作步骤*/
@@ -128,27 +128,27 @@ mysql&gt; CREATE TABLE `trade_detail` (
   KEY `tradeid` (`tradeid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
-insert into tradelog values(1, &#39;aaaaaaaa&#39;, 1000, now());
-insert into tradelog values(2, &#39;aaaaaaab&#39;, 1000, now());
-insert into tradelog values(3, &#39;aaaaaaac&#39;, 1000, now());
+insert into tradelog values(1, 'aaaaaaaa', 1000, now());
+insert into tradelog values(2, 'aaaaaaab', 1000, now());
+insert into tradelog values(3, 'aaaaaaac', 1000, now());
 
-insert into trade_detail values(1, &#39;aaaaaaaa&#39;, 1, &#39;add&#39;);
-insert into trade_detail values(2, &#39;aaaaaaaa&#39;, 2, &#39;update&#39;);
-insert into trade_detail values(3, &#39;aaaaaaaa&#39;, 3, &#39;commit&#39;);
-insert into trade_detail values(4, &#39;aaaaaaab&#39;, 1, &#39;add&#39;);
-insert into trade_detail values(5, &#39;aaaaaaab&#39;, 2, &#39;update&#39;);
-insert into trade_detail values(6, &#39;aaaaaaab&#39;, 3, &#39;update again&#39;);
-insert into trade_detail values(7, &#39;aaaaaaab&#39;, 4, &#39;commit&#39;);
-insert into trade_detail values(8, &#39;aaaaaaac&#39;, 1, &#39;add&#39;);
-insert into trade_detail values(9, &#39;aaaaaaac&#39;, 2, &#39;update&#39;);
-insert into trade_detail values(10, &#39;aaaaaaac&#39;, 3, &#39;update again&#39;);
-insert into trade_detail values(11, &#39;aaaaaaac&#39;, 4, &#39;commit&#39;);
+insert into trade_detail values(1, 'aaaaaaaa', 1, 'add');
+insert into trade_detail values(2, 'aaaaaaaa', 2, 'update');
+insert into trade_detail values(3, 'aaaaaaaa', 3, 'commit');
+insert into trade_detail values(4, 'aaaaaaab', 1, 'add');
+insert into trade_detail values(5, 'aaaaaaab', 2, 'update');
+insert into trade_detail values(6, 'aaaaaaab', 3, 'update again');
+insert into trade_detail values(7, 'aaaaaaab', 4, 'commit');
+insert into trade_detail values(8, 'aaaaaaac', 1, 'add');
+insert into trade_detail values(9, 'aaaaaaac', 2, 'update');
+insert into trade_detail values(10, 'aaaaaaac', 3, 'update again');
+insert into trade_detail values(11, 'aaaaaaac', 4, 'commit');
 ```
 
 这时候，如果要查询 id=2 的交易的所有操作步骤信息，SQL 语句可以这么写：
 
 ```sql
-mysql&gt; select d.* from tradelog l, trade_detail d where d.tradeid=l.tradeid and l.id=2; /*语句 Q1*/
+mysql> select d.* from tradelog l, trade_detail d where d.tradeid=l.tradeid and l.id=2; /*语句 Q1*/
 ```
 
 ![语句 Q1 的 explain 结果](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/adfe464af1d15f3261b710a806c0fa22.webp)
@@ -178,14 +178,14 @@ mysql&gt; select d.* from tradelog l, trade_detail d where d.tradeid=l.tradeid a
 我们说问题是出在执行步骤的第 3 步，如果单独把这一步改成 SQL 语句的话，那就是：
 
 ```sql
-mysql&gt; select * from trade_detail where tradeid=$L2.tradeid.value; 
+mysql> select * from trade_detail where tradeid=$L2.tradeid.value; 
 ```
 
 其中，$L2.tradeid.value 的字符集是 utf8mb4。
 
 参照前面的两个例子，你肯定就想到了，字符集 utf8mb4 是 utf8 的超集，所以当这两个类型的字符串在做比较的时候，MySQL 内部的操作是，先把 utf8 字符串转成 utf8mb4 字符集，再做比较。
 
-&gt; 这个设定很好理解，utf8mb4 是 utf8 的超集。类似地，在程序设计语言里面，做自动类型转换的时候，为了避免数据在转换过程中由于截断导致数据错误，也都是“按数据长度增加的方向”进行转换的。
+> 这个设定很好理解，utf8mb4 是 utf8 的超集。类似地，在程序设计语言里面，做自动类型转换的时候，为了避免数据在转换过程中由于截断导致数据错误，也都是“按数据长度增加的方向”进行转换的。
 
 因此，在执行上面这个语句的时候，需要将被驱动数据表里的字段一个个地转换成 utf8mb4，再跟 L2 做比较。也就是说，实际上这个语句等同于下面这个写法：
 
@@ -200,7 +200,7 @@ CONVERT() 函数，在这里的意思是把输入的字符串转成 utf8mb4 字�
 作为对比验证，“查找 trade_detail 表里 id=4 的操作，对应的操作者是谁”，再来看下这个语句和它的执行计划。
 
 ```sql
-mysql&gt;select l.operator from tradelog l , trade_detail d where d.tradeid=l.tradeid and d.id=4;
+mysql>select l.operator from tradelog l , trade_detail d where d.tradeid=l.tradeid and d.id=4;
 ```
 
 ![explain 结果](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/92cb498ceb3557e41700fae53ce9bd11.webp)
@@ -238,7 +238,7 @@ alter table trade_detail modify tradeid varchar(32) CHARACTER SET utf8mb4 defaul
 - 如果能够修改字段的字符集的话，是最好不过了。但如果数据量比较大，或者业务上暂时不能做这个 DDL 的话，那就只能采用修改 SQL 语句的方法了。
 
 ```sql
-mysql&gt; select d.* from tradelog l , trade_detail d where d.tradeid=CONVERT(l.tradeid USING utf8) and l.id=2;
+mysql> select d.* from tradelog l , trade_detail d where d.tradeid=CONVERT(l.tradeid USING utf8) and l.id=2;
 ```
 
 ![SQL 语句优化后的 explain 结果](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/aa844a7bf35d330b9ec96fc159331bd6.webp)
@@ -249,7 +249,7 @@ mysql&gt; select d.* from tradelog l , trade_detail d where d.tradeid=CONVERT(l.
 
 文中的三个例子，其实是在说同一件事儿，即：对索引字段做函数操作，可能会破坏索引值的有序性，因此优化器就决定放弃走树搜索功能。
 
-MySQL 的优化器确实有“偷懒”的嫌疑，即使简单地把 where id&#43;1=1000 改写成 where id=1000-1 就能够用上索引快速查找，也不会主动做这个语句重写。
+MySQL 的优化器确实有“偷懒”的嫌疑，即使简单地把 where id+1=1000 改写成 where id=1000-1 就能够用上索引快速查找，也不会主动做这个语句重写。
 
 ## 问题
 
@@ -258,7 +258,7 @@ MySQL 的优化器确实有“偷懒”的嫌疑，即使简单地把 where id&#
 答：有一张表，表结构如下：
 
 ```sql
-mysql&gt; CREATE TABLE `table_a` (
+mysql> CREATE TABLE `table_a` (
   `id` int(11) NOT NULL,
   `b` varchar(10) DEFAULT NULL,
   PRIMARY KEY (`id`),
@@ -269,7 +269,7 @@ mysql&gt; CREATE TABLE `table_a` (
 假设现在表里面，有 100 万行数据，其中有 10 万行数据的 b 的值是’1234567890’，假设现在执行语句是这么写的：
 
 ```sql
-mysql&gt; select * from table_a where b=&#39;1234567890abcd&#39;;
+mysql> select * from table_a where b='1234567890abcd';
 ```
 
 这时候，MySQL 会怎么执行呢？最理想的情况是，MySQL 看到字段 b 定义的是 varchar(10)，那肯定返回空呀。可惜，MySQL 并没有这么做。

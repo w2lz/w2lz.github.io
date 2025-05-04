@@ -1,11 +1,11 @@
 # 03 | 事务隔离：为什么你改了我还看不见？
 
 
-{{&lt; admonition quote &#34;摘要&#34; true &gt;}}
+{{< admonition quote "摘要" true >}}
 本文深入介绍了事务隔离的重要性以及 MySQL 中事务隔离的实现方式。通过生动的转账例子引出了事务的概念，强调了事务的一致性和原子性。随后详细介绍了隔离级别的概念，包括读未提交、读提交、可重复读和串行化，并通过具体例子解释了不同隔离级别下的行为差异。
-{{&lt; /admonition &gt;}}
+{{< /admonition >}}
 
-&lt;!--more--&gt;
+<!--more-->
 
 提到事务，大家肯定不陌生，和数据库打交道的时候，总是会用到事务。最经典的例子就是转账，你要给朋友小王转 100 块钱，而此时你的银行卡只有 100 块钱。
 
@@ -32,7 +32,7 @@
 其中“读提交”和“可重复读”比较难理解，用一个例子说明这几种隔离级别。假设数据表 T 中只有一列，其中一行的值为 1，下面是按照时间顺序执行两个事务的行为。
 
 ```sql
-mysql&gt; create table T(c int) engine=InnoDB;
+mysql> create table T(c int) engine=InnoDB;
 insert into T(c) values(1);
 ```
 
@@ -55,17 +55,17 @@ insert into T(c) values(1);
 配置的方式是，将启动参数 transaction-isolation 的值设置成 READ-COMMITTED。可以用 show variables 来查看当前的值。
 
 ```sql
-mysql&gt; show variables like &#39;transaction_isolation&#39;;
+mysql> show variables like 'transaction_isolation';
 
-&#43;-----------------------&#43;----------------&#43;
++-----------------------+----------------+
 
 | Variable_name | Value |
 
-&#43;-----------------------&#43;----------------&#43;
++-----------------------+----------------+
 
 | transaction_isolation | READ-COMMITTED |
 
-&#43;-----------------------&#43;----------------&#43;
++-----------------------+----------------+
 ```
 
 总结来说，存在即合理，每种隔离级别都有自己的使用场景，要根据自己的业务情况来定。你可能会问那什么时候需要“可重复读”的场景呢？来看一个数据校对逻辑的案例。
@@ -107,7 +107,7 @@ mysql&gt; show variables like &#39;transaction_isolation&#39;;
 可以在 information_schema 库的 innodb_trx 这个表中查询长事务，比如下面这个语句，用于查找持续时间超过 60s 的事务。
 
 ```sql
-select * from information_schema.innodb_trx where TIME_TO_SEC(timediff(now(),trx_started))&gt;60
+select * from information_schema.innodb_trx where TIME_TO_SEC(timediff(now(),trx_started))>60
 ```
 
 ## 小结

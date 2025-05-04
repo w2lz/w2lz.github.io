@@ -1,16 +1,16 @@
 # 01 | 基础架构：一条 SQL 查询语句是如何执行的？
 
 
-{{&lt; admonition quote &#34;摘要&#34; true &gt;}}
+{{< admonition quote "摘要" true >}}
 本文将把 MySQL 拆解一下，看看里面都有哪些“零件”，希望借由这个拆解过程，让你对 MySQL 有更深入的理解。
-{{&lt; /admonition &gt;}}
+{{< /admonition >}}
 
-&lt;!--more--&gt;
+<!--more-->
 
 平时使用数据库，看到的通常都是一个整体。比如，你有个最简单的表，表里只有一个 ID 字段，在执行下面这个查询语句时：
 
 ```sql
-mysql&gt; select * from T where ID = 10；
+mysql> select * from T where ID = 10；
 ```
 
 我们看到的只是输入一条语句，返回一个结果，却不知道这条语句在 MySQL 内部的执行过程。下面的是 MySQL 的基本架构示意图，从中可以清楚地看到 SQL 语句在 MySQL 的各个功能模块中的执行过程。
@@ -35,7 +35,7 @@ mysql -h$ip -P$port -u$user -p
 
 输完命令之后，就需要在交互对话里面输入密码。虽然密码也可以直接跟在 -p 后面写在命令行中，但这样可能会导致密码泄露。如果连的是生产服务器，强烈建议不要这么做。连接命令中的 mysql 是客户端工具，用来跟服务端建立连接。在完成经典的 TCP 握手后，连接器就要开始认证你的身份，这个时候用的就是输入的用户名和密码。
 
-- 如果用户名或密码不对，就会收到一个&#34;Access denied for user&#34;的错误，然后客户端程序结束执行。
+- 如果用户名或密码不对，就会收到一个"Access denied for user"的错误，然后客户端程序结束执行。
 
 - 如果用户名密码认证通过，连接器会到权限表里面查出你拥有的权限。之后，这个连接里面的权限判断逻辑，都将依赖于此时读到的权限。
 
@@ -70,7 +70,7 @@ MySQL 拿到一个查询请求后，会先到查询缓存看看，之前是不�
 好在 MySQL 也提供了这种“按需使用”的方式。可以将参数 query_cache_type 设置成 DEMAND，这样对于默认的 SQL 语句都不使用查询缓存。而对于你确定要使用查询缓存的语句，可以用 SQL_CACHE 显式指定，像下面这个语句一样：
 
 ```sql
-mysql&gt; select SQL_CACHE * from T where ID = 10；
+mysql> select SQL_CACHE * from T where ID = 10；
 ```
 
 需要注意的是，MySQL 8.0 版本直接将查询缓存的整块功能删掉了，也就是说 8.0 开始彻底没有这个功能了。
@@ -81,16 +81,16 @@ mysql&gt; select SQL_CACHE * from T where ID = 10；
 
 分析器先会做“词法分析”。输入的是由多个字符串和空格组成的一条 SQL 语句，MySQL 需要识别出里面的字符串分别是什么，代表什么。
 
-MySQL 从输入的&#34;select&#34;这个关键字识别出来，这是一个查询语句。它也要把字符串“T”识别成“表名 T”，把字符串“ID”识别成“列 ID”。
+MySQL 从输入的"select"这个关键字识别出来，这是一个查询语句。它也要把字符串“T”识别成“表名 T”，把字符串“ID”识别成“列 ID”。
 
 做完了这些识别以后，就要做“语法分析”。根据词法分析的结果，语法分析器会根据语法规则，判断输入的这个 SQL 语句是否满足 MySQL 语法。
 
 如果语句不对，就会收到“You have an error in your SQL syntax”的错误提醒，比如下面这个语句 select 少打了开头的字母“s”。
 
 ```sql
-mysql&gt; elect * from t where ID = 1;
+mysql> elect * from t where ID = 1;
 
-ERROR 1064 (42000): You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near &#39;elect * from t where ID=1&#39; at line 1
+ERROR 1064 (42000): You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near 'elect * from t where ID=1' at line 1
 ```
 
 一般语法错误会提示第一个出现错误的位置，所以要关注的是紧接“use near”的内容。
@@ -102,7 +102,7 @@ ERROR 1064 (42000): You have an error in your SQL syntax; check the manual that 
 优化器是在表里面有多个索引的时候，决定使用哪个索引；或者在一个语句有多表关联（join）的时候，决定各个表的连接顺序。比如执行下面这样的语句，这个语句是执行两个表的 join：
 
 ```sql
-mysql&gt; select * from t1 join t2 using(ID)  where t1.c = 10 and t2.d = 20;
+mysql> select * from t1 join t2 using(ID)  where t1.c = 10 and t2.d = 20;
 ```
 
 - 既可以先从表 t1 里面取出 c=10 的记录的 ID 值，再根据 ID 值关联到表 t2，再判断 t2 里面 d 的值是否等于 20。
@@ -118,9 +118,9 @@ MySQL 通过分析器知道了你要做什么，通过优化器知道了该怎�
 开始执行的时候，要先判断一下你对这个表 T 有没有执行查询的权限，如果没有，就会返回没有权限的错误，如下所示 (在工程实现上，如果命中查询缓存，会在查询缓存返回结果的时候，做权限验证。查询也会在优化器之前调用 precheck 验证权限)。
 
 ```sql
-mysql&gt; select * from T where ID = 10;
+mysql> select * from T where ID = 10;
 
-ERROR 1142 (42000): SELECT command denied to user &#39;b&#39;@&#39;localhost&#39; for table &#39;T&#39;
+ERROR 1142 (42000): SELECT command denied to user 'b'@'localhost' for table 'T'
 ```
 
 如果有权限，就打开表继续执行。打开表的时候，执行器就会根据表的引擎定义，去使用这个引擎提供的接口。比如这个例子中的表 T 中，ID 字段没有索引，那么执行器的执行流程是这样的：

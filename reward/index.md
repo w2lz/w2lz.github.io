@@ -1,13 +1,13 @@
 # 赞赏记录
 
 
-{{&lt; reward wechatpay=&#34;/images/wechatpay.jpg&#34; alipay=&#34;/images/alipay.jpg&#34; comment=&#34;给博主买杯卡布奇诺～&#34; mode=&#34;fixed&#34; &gt;}}
-{{&lt; reward-log animation=true height=&#34;auto; max-height: 90vh&#34; &gt;}}
-{{&lt; busuanzi_embed &gt;}}
+{{< reward wechatpay="/images/wechatpay.jpg" alipay="/images/alipay.jpg" comment="给博主买杯卡布奇诺～" mode="fixed" >}}
+{{< reward-log animation=true height="auto; max-height: 90vh" >}}
+{{< busuanzi_embed >}}
 
 
 ---
 
-> 作者:   
+> 作者: <no value>  
 > URL: https://blog.yingnan.wang/reward/  
 

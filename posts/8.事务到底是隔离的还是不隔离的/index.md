@@ -1,11 +1,11 @@
 # 08 | 事务到底是隔离的还是不隔离的？
 
 
-{{&lt; admonition quote &#34;摘要&#34; true &gt;}}
+{{< admonition quote "摘要" true >}}
 本文深入探讨了事务隔离级别对于事务可见性的影响，并重点介绍了可重复读隔离级别下的事务视图和行锁的概念。文章详细解释了在 MySQL 中 MVCC 实现时使用的一致性读视图的概念，以及 InnoDB 如何利用多版本数据实现“秒级创建快照”的能力。
-{{&lt; /admonition &gt;}}
+{{< /admonition >}}
 
-&lt;!--more--&gt;
+<!--more-->
 
 如果是可重复读隔离级别，事务 T 启动的时候会创建一个视图 read-view，之后事务 T 执行期间，即使有其他事务修改了数据，事务 T 看到的仍然跟在启动时看到的一样。也就是说，一个在可重复读隔离级别下执行的事务，好像与世无争，不受外界影响。
 
@@ -14,7 +14,7 @@
 举一个例子，下面是一个只有两行的表的初始化语句。
 
 ```sql
-mysql&gt; CREATE TABLE `t` (
+mysql> CREATE TABLE `t` (
   `id` int(11) NOT NULL,
   `k` int(11) DEFAULT NULL,
   PRIMARY KEY (`id`)
@@ -26,9 +26,9 @@ insert into t(id, k) values(1,1),(2,2);
 
 这里，需要注意的是事务的启动时机。begin/start transaction 命令并不是一个事务的起点，在执行到它们之后的第一个操作 InnoDB 表的语句，事务才真正启动。如果想要马上启动一个事务，可以使用 start transaction with consistent snapshot 这个命令。
 
-&gt; 第一种启动方式，一致性视图是在执行第一个快照读语句时创建的；
-&gt; 
-&gt; 第二种启动方式，一致性视图是在执行 start transaction with consistent snapshot 时创建的。
+> 第一种启动方式，一致性视图是在执行第一个快照读语句时创建的；
+> 
+> 第二种启动方式，一致性视图是在执行 start transaction with consistent snapshot 时创建的。
 
 例子中如果没有特别说明，都是默认 autocommit=1。在这个例子中，事务 C 没有显式地使用 begin/commit，表示这个 update 语句本身就是一个事务，语句完成的时候会自动提交。事务 B 在更新了行之后查询 ; 事务 A 在一个只读事务中查询，并且时间顺序上是在事务 B 的查询之后。此时事务 B 查到的 k 的值是 3，而事务 A 查到的 k 的值是 1。
 
@@ -136,7 +136,7 @@ InnoDB 里面每个事务有一个唯一的事务 ID，叫作 transaction id。�
 
 ![事务 B 更新逻辑图](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/86ad7e8abe7bf16505b97718d8ac149f.webp)
 
-是的，如果事务 B 在更新之前查询一次数据，这个查询返回的 k 的值确实是 1。但是，当它要去更新数据的时候，就不能再在历史版本上更新了，否则事务 C 的更新就丢失了。因此，事务 B 此时的 set k=k&#43;1 是在（1,2）的基础上进行的操作。
+是的，如果事务 B 在更新之前查询一次数据，这个查询返回的 k 的值确实是 1。但是，当它要去更新数据的时候，就不能再在历史版本上更新了，否则事务 C 的更新就丢失了。因此，事务 B 此时的 set k=k+1 是在（1,2）的基础上进行的操作。
 
 所以，这里就用到了这样一条规则：更新数据都是先读后写的，而这个读，只能读当前的值，称为“当前读”（current read）。
 
@@ -145,19 +145,19 @@ InnoDB 里面每个事务有一个唯一的事务 ID，叫作 transaction id。�
 其实，除了 update 语句外，select 语句如果加锁，也是当前读。所以，如果把事务 A 的查询语句 select * from t where id=1 修改一下，加上 lock in share mode 或 for update，也都可以读到版本号是 101 的数据，返回的 k 的值是 3。下面这两个 select 语句，就是分别加了读锁（S 锁，共享锁）和写锁（X 锁，排他锁）。
 
 ```sql
-mysql&gt; select k from t where id=1 lock in share mode;
-mysql&gt; select k from t where id=1 for update;
+mysql> select k from t where id=1 lock in share mode;
+mysql> select k from t where id=1 for update;
 ```
 
 再往前一步，假设事务 C 不是马上提交的，而是变成了下面的事务 C’，会怎么样呢？
 
-![事务 A、B、C&#39;的执行流程](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/cda2a0d7decb61e59dddc83ac51efb6e.webp)
+![事务 A、B、C'的执行流程](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/cda2a0d7decb61e59dddc83ac51efb6e.webp)
 
 事务 C’的不同是，更新后并没有马上提交，在它提交前，事务 B 的更新语句先发起了。前面说过了，虽然事务 C’还没提交，但是 (1,2) 这个版本也已经生成了，并且是当前的最新版本。那么，事务 B 的更新语句会怎么处理呢？
 
 事务 C’没提交，也就是说 (1,2) 这个版本上的写锁还没释放。而事务 B 是当前读，必须要读最新版本，而且必须加锁，因此就被锁住了，必须等到事务 C’释放这个锁，才能继续它的当前读。
 
-![事务 B 更新逻辑图（配合事务 C&#39;）](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/540967ea905e8b63630e496786d84c92.webp)
+![事务 B 更新逻辑图（配合事务 C'）](https://file.yingnan.wang/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/540967ea905e8b63630e496786d84c92.webp)
 
 事务的可重复读的能力是怎么实现的？
 
@@ -202,7 +202,7 @@ InnoDB 的行数据有多个版本，每个数据版本有自己的 row trx_id�
 问：用下面的表结构和初始化语句作为试验环境，事务隔离级别是可重复读。现在，要把所有“字段 c 和 id 值相等的行”的 c 值清零，但是却发现了一个“诡异”的、改不掉的情况。请构造出这种情况，并说明其原理。
 
 ```sql
-mysql&gt; CREATE TABLE `t` (
+mysql> CREATE TABLE `t` (
   `id` int(11) NOT NULL,
   `c` int(11) DEFAULT NULL,
   PRIMARY KEY (`id`)
